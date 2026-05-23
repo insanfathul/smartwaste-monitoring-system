@@ -156,3 +156,19 @@ function switchView(viewName) {
         event.target.closest('.nav-link').classList.add('active', 'bg-green-600');
     }
 }
+// Tambahkan di akhir file ui.js
+
+// ===== UPDATE WASTE POINTS STATS =====
+function updateWastePointsStats() {
+    const points = getWastePoints();
+    const total = points.length;
+    const collected = points.filter(p => p.status === 'collected').length;
+    const pending = points.filter(p => p.status === 'pending').length;
+    
+    document.getElementById('total-points').textContent = total;
+    document.getElementById('collected-points').textContent = collected;
+    document.getElementById('pending-points').textContent = pending;
+}
+
+// Panggil setiap kali ada update
+setInterval(updateWastePointsStats, 2000);

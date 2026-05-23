@@ -8,7 +8,6 @@ function initApp() {
     console.log("=== Smart Waste Monitoring System ===");
     console.log("Initializing...");
     
-    // Check authentication first
     const isLoggedIn = checkAuth();
     
     if (!isLoggedIn) {
@@ -25,21 +24,12 @@ function initApp() {
     // Initialize MQTT connection
     initMQTT();
     
-    // Start time update
+    // Update stats
+    updateWastePointsStats();
     updateCurrentTime();
     
     console.log("System ready!");
     
     const user = getCurrentUser();
     addLog(`✓ Sistem aktif - ${user.name} (${user.truckId})`, "success");
-}
-
-// ===== RUN ON PAGE LOAD =====
-window.addEventListener('load', initApp);
-
-// Fallback
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
-} else {
-    initApp();
 }
