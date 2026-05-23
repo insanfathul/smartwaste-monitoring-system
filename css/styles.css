@@ -1,0 +1,173 @@
+/* ===================================
+   Smart Waste Monitoring System
+   Custom Styles
+   =================================== */
+
+:root {
+    /* Color Palette */
+    --primary-green: #2E7D32;
+    --secondary-green: #66BB6A;
+    --orange-accent: #F57C00;
+    --white-bg: #FFFFFF;
+    --soft-bg: #F5F7FA;
+    --dark-text: #263238;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--soft-bg);
+    color: var(--dark-text);
+}
+
+/* ===== UTILITY CLASSES ===== */
+.bg-green-dark {
+    background-color: var(--primary-green);
+}
+
+.bg-green-light {
+    background-color: var(--secondary-green);
+}
+
+.text-green-dark {
+    color: var(--primary-green);
+}
+
+.text-orange-custom {
+    color: var(--orange-accent);
+}
+
+.bg-orange-custom {
+    background-color: var(--orange-accent);
+}
+
+.bg-soft-bg {
+    background-color: var(--soft-bg);
+}
+
+.text-dark-text {
+    color: var(--dark-text);
+}
+
+.soft-shadow {
+    box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* ===== LEAFLET MAP ===== */
+#map {
+    width: 100%;
+    height: 100%;
+    border-radius: 0.75rem;
+    z-index: 1;
+}
+
+.custom-truck-marker {
+    background: transparent;
+    border: none;
+}
+
+/* ===== SCROLLBAR STYLING ===== */
+#notification-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+#notification-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#notification-container::-webkit-scrollbar-thumb {
+    background: var(--secondary-green);
+    border-radius: 10px;
+}
+
+#notification-container::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-green);
+}
+
+/* ===== NAVIGATION ACTIVE STATE ===== */
+.nav-link.active {
+    background-color: #1B5E20 !important;
+}
+
+/* ===== TRUCK CARD ===== */
+.truck-card {
+    padding: 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.truck-card:hover {
+    border-color: var(--primary-green);
+    box-shadow: 0 2px 8px rgba(46, 125, 50, 0.1);
+}
+
+.truck-card.active {
+    border-color: var(--primary-green);
+    background: #f0f9f0;
+}
+
+/* ===== CAPACITY COLOR INDICATORS ===== */
+.capacity-green {
+    background-color: var(--secondary-green) !important;
+}
+
+.capacity-yellow {
+    background-color: #FDD835 !important;
+}
+
+.capacity-orange {
+    background-color: var(--orange-accent) !important;
+}
+
+.capacity-red {
+    background-color: #E53935 !important;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    aside {
+        width: 100%;
+        height: auto;
+    }
+    
+    main {
+        height: auto;
+    }
+}
+
+/* ===== LOADING SPINNER ===== */
+.spinner {
+    border: 3px solid rgba(46, 125, 50, 0.1);
+    border-radius: 50%;
+    border-top: 3px solid var(--primary-green);
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

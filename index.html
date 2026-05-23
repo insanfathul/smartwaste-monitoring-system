@@ -5,385 +5,296 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Waste Monitoring System - Telkom University</title>
     
-    <!-- Tailwind CSS CDN -->
+    <!-- External CSS & JS Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Google Fonts Poppins -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Paho MQTT WebSockets Client -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
-    <!-- Leaflet CSS & JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #F5F7FA;
-        }
-
-        /* Custom Color Palette */
-        .bg-primary { background-color: #2E7D32; }
-        .bg-secondary { background-color: #66BB6A; }
-        .bg-orange { background-color: #F57C00; }
-        .bg-soft { background-color: #F5F7FA; }
-        .text-primary { color: #2E7D32; }
-        .text-secondary { color: #66BB6A; }
-        .text-orange { color: #F57C00; }
-        .text-dark { color: #263238; }
-        
-        .soft-shadow {
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        }
-
-        .border-primary { border-color: #2E7D32; }
-        .border-secondary { border-color: #66BB6A; }
-        .border-orange { border-color: #F57C00; }
-
-        #map {
-            width: 100%;
-            height: 100%;
-            border-radius: 12px;
-            z-index: 1;
-        }
-
-        /* Status Indicators */
-        .status-active {
-            background-color: #66BB6A;
-            animation: pulse 2s infinite;
-        }
-
-        .status-inactive {
-            background-color: #9E9E9E;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-
-        /* Capacity Color Indicators */
-        .capacity-low { background-color: #66BB6A; }
-        .capacity-medium { background-color: #FFEB3B; }
-        .capacity-high { background-color: #F57C00; }
-        .capacity-full { background-color: #E53935; }
-
-        /* Scrollbar Styling */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #F5F7FA;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #2E7D32;
-            border-radius: 10px;
-        }
-
-        /* Route Marker Animation */
-        .route-marker {
-            animation: bounce 1s infinite;
-        }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        /* Login Modal */
-        .modal {
-            display: flex;
-            position: fixed;
-            z-index: 9999;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(38, 50, 56, 0.9);
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            max-width: 400px;
-            width: 90%;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-    </style>
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/styles.css">
 </head>
-
 <body class="flex h-screen overflow-hidden">
-
-    <!-- LOGIN MODAL -->
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <div class="text-center mb-6">
-                <i class="fas fa-truck text-primary text-5xl mb-3"></i>
-                <h2 class="text-2xl font-bold text-dark">Smart Waste Monitoring</h2>
-                <p class="text-sm text-gray-500">Login untuk akses dashboard</p>
-            </div>
-            <form id="loginForm" onsubmit="handleLogin(event)">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-dark mb-2">User ID</label>
-                    <input type="text" id="userId" required 
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
-                           placeholder="Masukkan User ID">
-                </div>
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-dark mb-2">Kode Truck</label>
-                    <input type="text" id="truckCode" required 
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
-                           placeholder="Contoh: TRUCK_01">
-                </div>
-                <button type="submit" 
-                        class="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:bg-opacity-90 transition">
-                    <i class="fas fa-sign-in-alt mr-2"></i>Login
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- SIDEBAR NAVIGATION -->
-    <aside class="w-64 bg-primary text-white flex flex-col justify-between soft-shadow z-10">
+    
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="w-64 bg-green-dark text-white flex flex-col justify-between soft-shadow z-10">
         <div>
-            <div class="p-6 flex items-center gap-3 border-b border-opacity-20 border-white">
-                <i class="fas fa-recycle text-3xl text-secondary"></i>
+            <!-- Sidebar Header -->
+            <div class="p-6 flex items-center gap-3 border-b border-green-700">
+                <i class="fa-solid fa-leaf text-2xl text-green-300"></i>
                 <div>
                     <h1 class="font-bold text-lg leading-tight">Smart Waste</h1>
                     <span class="text-xs text-green-200">Monitoring System</span>
                 </div>
             </div>
-
-            <!-- User Info -->
-            <div class="p-4 bg-white bg-opacity-10 mx-4 mt-4 rounded-lg">
-                <p class="text-xs text-green-200">User ID</p>
-                <p id="displayUserId" class="font-semibold text-sm">-</p>
-                <p class="text-xs text-green-200 mt-2">Truck ID</p>
-                <p id="displayTruckId" class="font-semibold text-sm">-</p>
-            </div>
-
-            <nav class="p-4 space-y-2 mt-4">
-                <a href="#" class="flex items-center gap-4 px-4 py-3 bg-secondary rounded-xl transition duration-200">
-                    <i class="fas fa-map-marked-alt w-5"></i>
+            
+            <!-- Navigation Menu -->
+            <nav class="p-4 space-y-2">
+                <a href="#dashboard" onclick="switchView('dashboard')" 
+                   class="nav-link flex items-center gap-4 px-4 py-3 bg-green-600 rounded-xl transition duration-200">
+                    <i class="fa-solid fa-map-location-dot w-5"></i>
                     <span class="text-sm font-medium">Live Tracking</span>
                 </a>
-                <a href="#" class="flex items-center gap-4 px-4 py-3 hover:bg-white hover:bg-opacity-10 rounded-xl transition duration-200">
-                    <i class="fas fa-chart-line w-5"></i>
-                    <span class="text-sm font-medium">Analytics</span>
+                <a href="#trucks" onclick="switchView('trucks')" 
+                   class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-green-600 rounded-xl transition duration-200">
+                    <i class="fa-solid fa-truck w-5"></i>
+                    <span class="text-sm font-medium">Manajemen Truck</span>
                 </a>
-                <a href="#" class="flex items-center gap-4 px-4 py-3 hover:bg-white hover:bg-opacity-10 rounded-xl transition duration-200">
-                    <i class="fas fa-clock w-5"></i>
-                    <span class="text-sm font-medium">History</span>
+                <a href="#routes" onclick="switchView('routes')" 
+                   class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-green-600 rounded-xl transition duration-200">
+                    <i class="fa-solid fa-route w-5"></i>
+                    <span class="text-sm font-medium">Rute & Marking</span>
+                </a>
+                <a href="#analytics" onclick="switchView('analytics')" 
+                   class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-green-600 rounded-xl transition duration-200">
+                    <i class="fa-solid fa-chart-pie w-5"></i>
+                    <span class="text-sm font-medium">Analitik</span>
                 </a>
             </nav>
         </div>
-
-        <div class="p-4 border-t border-white border-opacity-20">
+        
+        <!-- MQTT Status Footer -->
+        <div class="p-4 border-t border-green-700">
             <div class="text-center mb-2">
-                <span class="text-xs text-green-200">MQTT Status</span>
-                <div id="mqtt-status" class="mt-1 text-xs px-3 py-1.5 rounded-full bg-orange text-white font-semibold inline-block">
-                    <i class="fas fa-circle animate-pulse mr-1"></i>Connecting...
-                </div>
+                <span class="text-xs text-green-200">MQTT Server:</span>
+                <span id="mqtt-status" class="block text-xs px-2 py-1 mt-1 rounded bg-orange-custom text-white font-semibold">
+                    Connecting...
+                </span>
             </div>
-            <button onclick="handleLogout()" 
-                    class="w-full mt-3 bg-white bg-opacity-10 hover:bg-opacity-20 text-white py-2 rounded-lg text-sm transition">
-                <i class="fas fa-sign-out-alt mr-2"></i>Logout
-            </button>
+            <div class="text-center text-xs text-green-200">
+                <i class="fa-solid fa-server mr-1"></i>
+                <span>HiveMQ Broker</span>
+            </div>
         </div>
     </aside>
 
     <!-- MAIN CONTENT -->
-    <main class="flex-1 flex flex-col overflow-y-auto bg-soft">
+    <main class="flex-1 flex flex-col overflow-y-auto bg-soft-bg">
         
-        <!-- HEADER -->
+        <!-- TOP HEADER -->
         <header class="bg-white h-16 flex items-center justify-between px-8 soft-shadow z-50">
-            <h2 class="text-xl font-semibold text-dark">
-                <i class="fas fa-dashboard text-primary mr-2"></i>Dashboard Fleet IoT
+            <h2 class="text-xl font-semibold text-dark-text">
+                Smart Waste Monitoring System - Telkom University
             </h2>
             <div class="flex items-center gap-4">
                 <div class="text-right">
-                    <p class="text-sm font-medium text-dark">Telkom University</p>
-                    <p class="text-xs text-gray-400" id="currentTime">-</p>
+                    <p class="text-sm font-medium text-dark-text">Monitoring Center</p>
+                    <p class="text-xs text-gray-400" id="current-time">--:--:--</p>
+                </div>
+                <div class="w-10 h-10 bg-green-dark rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-user text-white"></i>
                 </div>
             </div>
         </header>
 
         <!-- DASHBOARD CONTENT -->
-        <div class="p-8 space-y-6 flex-1">
+        <div id="dashboard-view" class="p-8 space-y-6 flex-1">
             
-            <!-- ROW 1: STATUS CARDS -->
+            <!-- ROW 1: TRUCK REGISTRATION FORM -->
+            <div class="bg-white p-6 rounded-2xl soft-shadow">
+                <h3 class="font-semibold text-dark-text mb-4">
+                    <i class="fa-solid fa-truck-ramp-box text-green-dark mr-2"></i>
+                    Registrasi Truck Sampah
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-2">User ID</label>
+                        <input type="text" id="input-userid" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-dark focus:outline-none"
+                               placeholder="Masukkan User ID">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-2">Kode Truck</label>
+                        <input type="text" id="input-truckcode" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-dark focus:outline-none"
+                               placeholder="Contoh: TS-01">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-2">Nama Driver</label>
+                        <input type="text" id="input-driver" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-dark focus:outline-none"
+                               placeholder="Nama Driver">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="registerTruck()" 
+                                class="w-full px-4 py-2 bg-green-dark text-white rounded-lg hover:bg-green-600 transition">
+                            <i class="fa-solid fa-plus mr-2"></i>Tambah Truck
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Truck List -->
+                <div class="mt-4">
+                    <h4 class="text-sm font-semibold text-dark-text mb-2">Daftar Truck Terdaftar:</h4>
+                    <div id="truck-list" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <!-- Truck items will be inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROW 2: STATUS CARDS -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 
-                <!-- Truck Status -->
-                <div class="bg-white p-5 rounded-2xl soft-shadow border-l-4 border-primary">
-                    <div class="flex items-center justify-between mb-3">
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Status Kendaraan</p>
-                        <div class="w-3 h-3 rounded-full status-inactive" id="vehicleStatusIndicator"></div>
+                <!-- Card: Kapasitas -->
+                <div class="bg-white p-5 rounded-2xl soft-shadow border-l-4 border-orange-custom flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Kapasitas Sampah</p>
+                        <h3 id="val-capacity" class="text-2xl font-bold text-dark-text mt-1">0%</h3>
+                        <span id="capacity-status" class="text-xs px-2 py-1 rounded bg-green-light text-white mt-2 inline-block">
+                            Normal
+                        </span>
                     </div>
-                    <h3 id="vehicleStatus" class="text-lg font-bold text-dark">Tidak Beroperasi</h3>
-                    <div class="w-11 h-11 bg-green-100 rounded-xl flex items-center justify-center text-primary text-xl mt-3">
-                        <i class="fas fa-truck-moving"></i>
-                    </div>
-                </div>
-
-                <!-- Capacity Status -->
-                <div class="bg-white p-5 rounded-2xl soft-shadow border-l-4 border-orange">
-                    <div class="flex items-center justify-between mb-3">
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Kapasitas Muatan</p>
-                    </div>
-                    <h3 id="capacityValue" class="text-3xl font-bold text-dark">0%</h3>
-                    <div class="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div id="capacityBar" class="h-full capacity-low transition-all duration-500" style="width: 0%"></div>
+                    <div class="w-11 h-11 bg-orange-100 rounded-xl flex items-center justify-center text-orange-custom text-xl">
+                        <i class="fa-solid fa-dumpster"></i>
                     </div>
                 </div>
 
-                <!-- GPS Coordinates -->
-                <div class="bg-white p-5 rounded-2xl soft-shadow border-l-4 border-secondary">
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Koordinat GPS</p>
-                    <h3 id="gpsCoordinates" class="text-sm font-bold text-dark">-6.9744, 107.6316</h3>
-                    <div class="w-11 h-11 bg-green-100 rounded-xl flex items-center justify-center text-secondary text-xl mt-3">
-                        <i class="fas fa-map-marker-alt"></i>
+                <!-- Card: GPS -->
+                <div class="bg-white p-5 rounded-2xl soft-shadow border-l-4 border-green-light flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Koordinat GPS</p>
+                        <h3 id="val-gps" class="text-xs font-bold text-dark-text mt-2 truncate max-w-[160px]">
+                            -6.9744, 107.6316
+                        </h3>
+                    </div>
+                    <div class="w-11 h-11 bg-green-100 rounded-xl flex items-center justify-center text-green-light text-xl">
+                        <i class="fa-solid fa-location-dot"></i>
                     </div>
                 </div>
 
-                <!-- Movement Sensor -->
-                <div class="bg-white p-5 rounded-2xl soft-shadow border-l-4 border-blue-500">
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Sensor Gerak (MPU)</p>
-                    <h3 id="movementStatus" class="text-lg font-bold text-dark">Diam</h3>
-                    <div class="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center text-blue-500 text-xl mt-3">
-                        <i class="fas fa-arrows-spin"></i>
+                <!-- Card: Status Operasi -->
+                <div class="bg-white p-5 rounded-2xl soft-shadow border-l-4 border-blue-500 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Status Operasi</p>
+                        <h3 id="val-operation" class="text-lg font-bold text-dark-text mt-1">Standby</h3>
+                        <span id="operation-indicator" class="text-xs">
+                            <i class="fa-solid fa-circle text-gray-400 mr-1"></i>Tidak Beroperasi
+                        </span>
+                    </div>
+                    <div class="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center text-blue-500 text-xl">
+                        <i class="fa-solid fa-truck-moving"></i>
                     </div>
                 </div>
 
-                <!-- Target Prediction -->
-                <div class="bg-white p-5 rounded-2xl soft-shadow border-l-4 border-purple-500">
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Prediksi Target</p>
-                    <h3 id="targetPrediction" class="text-sm font-bold text-dark">Menunggu data...</h3>
-                    <div class="w-11 h-11 bg-purple-100 rounded-xl flex items-center justify-center text-purple-500 text-xl mt-3">
-                        <i class="fas fa-bullseye"></i>
+                <!-- Card: Kemiringan IMU -->
+                <div class="bg-white p-5 rounded-2xl soft-shadow border-l-4 border-green-dark flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Kemiringan (IMU)</p>
+                        <h3 id="val-imu" class="text-2xl font-bold text-dark-text mt-1">0°</h3>
+                    </div>
+                    <div class="w-11 h-11 bg-green-50 rounded-xl flex items-center justify-center text-green-dark text-xl">
+                        <i class="fa-solid fa-arrows-spin"></i>
+                    </div>
+                </div>
+
+                <!-- Card: Sinyal GSM -->
+                <div class="bg-white p-5 rounded-2xl soft-shadow border-l-4 border-purple-500 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Sinyal GSM</p>
+                        <h3 id="val-gsm" class="text-2xl font-bold text-dark-text mt-1">0 dBm</h3>
+                    </div>
+                    <div class="w-11 h-11 bg-purple-100 rounded-xl flex items-center justify-center text-purple-500 text-xl">
+                        <i class="fa-solid fa-signal"></i>
                     </div>
                 </div>
 
             </div>
 
-            <!-- ROW 2: MAP & NOTIFICATIONS -->
+            <!-- ROW 3: MAP & NOTIFICATIONS -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                <!-- LEAFLET MAP -->
-                <div class="lg:col-span-2 bg-white p-6 rounded-2xl soft-shadow h-[500px] flex flex-col">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-semibold text-dark">
-                            <i class="fas fa-route text-primary mr-2"></i>Live Route Tracking
+                <!-- Live Map -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl soft-shadow flex flex-col h-[500px]">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-semibold text-dark-text">
+                            <i class="fa-solid fa-map text-green-dark mr-2"></i>
+                            Live Tracking - Telkom University Area
                         </h3>
                         <div class="flex gap-2">
-                            <button onclick="centerToTruck()" 
-                                    class="text-xs px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-opacity-90 transition">
-                                <i class="fas fa-crosshairs mr-1"></i>Fokus Truck
+                            <button onclick="centerToCampus()" 
+                                    class="text-xs px-3 py-1 bg-green-dark text-white rounded-lg hover:bg-green-600 transition">
+                                <i class="fa-solid fa-building-columns mr-1"></i> Fokus Kampus
                             </button>
                             <button onclick="toggleRoute()" 
-                                    class="text-xs px-3 py-1.5 bg-orange text-white rounded-lg hover:bg-opacity-90 transition">
-                                <i class="fas fa-map-marked mr-1"></i>Rute
+                                    class="text-xs px-3 py-1 bg-orange-custom text-white rounded-lg hover:bg-orange-600 transition">
+                                <i class="fa-solid fa-route mr-1"></i> <span id="route-btn-text">Tampilkan Rute</span>
                             </button>
                         </div>
                     </div>
-                    <div class="flex-1 border-2 border-gray-200 rounded-xl overflow-hidden">
+                    <div class="flex-1 border border-gray-200 rounded-xl overflow-hidden">
                         <div id="map"></div>
                     </div>
-                    <div class="mt-3 flex justify-between text-xs text-gray-500">
-                        <div><span class="inline-block w-3 h-3 bg-primary rounded-full mr-1"></span>Area Kampus</div>
-                        <div><span class="inline-block w-3 h-3 bg-orange rounded-full mr-1"></span>Rute Dilalui</div>
-                        <div><span class="inline-block w-3 h-3 bg-red-500 rounded-full mr-1"></span>Keluar Jalur</div>
+                    
+                    <!-- Route Compliance Indicator -->
+                    <div class="mt-3 p-3 rounded-lg" id="route-status">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-route text-gray-400"></i>
+                            <span class="text-xs font-medium text-gray-600">Status Rute: </span>
+                            <span id="route-compliance" class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded">
+                                Menunggu data GPS
+                            </span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- NOTIFICATION LOG -->
-                <div class="bg-white p-6 rounded-2xl soft-shadow h-[500px] flex flex-col">
-                    <h3 class="font-semibold text-dark mb-4">
-                        <i class="fas fa-bell text-orange mr-2"></i>Log Notifikasi
-                    </h3>
-                    <div id="notificationLog" class="flex-1 overflow-y-auto space-y-3 pr-2">
-                        <div class="p-3 bg-soft border-l-4 border-secondary rounded-r-lg text-xs">
-                            <span class="font-semibold text-primary">System Ready</span>
-                            <p class="text-gray-600 mt-1">Monitoring system aktif</p>
+                <!-- Notification Panel -->
+                <div class="bg-white p-6 rounded-2xl soft-shadow flex flex-col h-[500px]">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-semibold text-dark-text">
+                            <i class="fa-solid fa-bell text-orange-custom mr-2"></i>
+                            Log Aktivitas Real-time
+                        </h3>
+                        <button onclick="clearLogs()" class="text-xs text-gray-500 hover:text-red-500">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                    <div id="notification-container" class="flex-1 overflow-y-auto space-y-3 text-xs text-gray-600 pr-1">
+                        <div class="p-3 bg-gray-50 border-l-2 border-green-dark rounded-r-xl">
+                            <b>[SYSTEM]</b> Sistem monitoring aktif. Menunggu koneksi MQTT...
                         </div>
                     </div>
                 </div>
 
             </div>
 
-            <!-- ROW 3: CHARTS -->
+            <!-- ROW 4: CHARTS -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
-                <!-- Capacity Chart -->
+                <!-- Chart: Kapasitas -->
                 <div class="bg-white p-6 rounded-2xl soft-shadow">
-                    <h3 class="font-semibold text-dark mb-4">
-                        <i class="fas fa-chart-area text-secondary mr-2"></i>Grafik Kapasitas Real-time
+                    <h3 class="font-semibold text-dark-text mb-3">
+                        <i class="fa-solid fa-chart-line text-green-light mr-2"></i>
+                        Grafik Kapasitas Bak Sampah (%)
                     </h3>
-                    <div class="h-[220px]">
+                    <div class="h-[200px]">
                         <canvas id="capacityChart"></canvas>
                     </div>
                 </div>
 
-                <!-- Distance ToF Sensors -->
+                <!-- Chart: Prediksi Target -->
                 <div class="bg-white p-6 rounded-2xl soft-shadow">
-                    <h3 class="font-semibold text-dark mb-4">
-                        <i class="fas fa-ruler text-orange mr-2"></i>Data Sensor ToF (3 Titik)
+                    <h3 class="font-semibold text-dark-text mb-3">
+                        <i class="fa-solid fa-bullseye text-orange-custom mr-2"></i>
+                        Prediksi Target Operasi Harian
                     </h3>
-                    <div class="space-y-4">
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span class="text-gray-600">ToF Sensor 1</span>
-                                <span id="tof1Value" class="font-semibold text-dark">0 cm</span>
-                            </div>
-                            <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <div id="tof1Bar" class="h-full bg-secondary" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span class="text-gray-600">ToF Sensor 2</span>
-                                <span id="tof2Value" class="font-semibold text-dark">0 cm</span>
-                            </div>
-                            <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <div id="tof2Bar" class="h-full bg-secondary" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span class="text-gray-600">ToF Sensor 3</span>
-                                <span id="tof3Value" class="font-semibold text-dark">0 cm</span>
-                            </div>
-                            <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <div id="tof3Bar" class="h-full bg-secondary" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <div class="mt-4 p-3 bg-soft rounded-lg">
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-600">Rata-rata Jarak:</span>
-                                <span id="avgDistance" class="font-bold text-primary">0 cm</span>
+                    <div class="h-[200px] flex items-center justify-center">
+                        <div class="text-center">
+                            <div class="text-5xl font-bold text-green-dark" id="prediction-percentage">0%</div>
+                            <p class="text-sm text-gray-500 mt-2">Target tercapai hari ini</p>
+                            <div class="mt-4 flex gap-4 justify-center text-xs">
+                                <div>
+                                    <span class="text-gray-600">Target:</span>
+                                    <span class="font-semibold text-dark-text" id="target-trips">8 trip</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-600">Selesai:</span>
+                                    <span class="font-semibold text-green-dark" id="completed-trips">0 trip</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -395,530 +306,13 @@
 
     </main>
 
-    <!-- JAVASCRIPT -->
-    <script>
-        // ==================== GLOBAL VARIABLES ====================
-        let userSession = {
-            userId: null,
-            truckCode: null,
-            isLoggedIn: false
-        };
-
-        let map, truckMarker, campusPolygon, routePolyline;
-        let routeCoordinates = [];
-        let isRouteVisible = true;
-
-        // Telkom University Boundaries (Geofence)
-        const telkomBoundary = [
-            [-6.9691, 107.6276], // Northwest
-            [-6.9685, 107.6346], // Northeast
-            [-6.9798, 107.6360], // Southeast
-            [-6.9809, 107.6291]  // Southwest
-        ];
-
-        const campusCenter = [-6.9744, 107.6316];
-
-        // Predefined Route (Example waste collection route)
-        const predefinedRoute = [
-            [-6.9744, 107.6316], // Start: Rektorat
-            [-6.9730, 107.6300], // Point 1
-            [-6.9720, 107.6320], // Point 2
-            [-6.9750, 107.6340], // Point 3
-            [-6.9770, 107.6330], // Point 4
-            [-6.9780, 107.6310], // Point 5
-            [-6.9744, 107.6316]  // Return to start
-        ];
-
-        // MQTT Configuration
-        const MQTT_CONFIG = {
-            host: "broker.hivemq.com",
-            port: 8884,
-            topic: "truck/monitoring/data",
-            clientId: "waste_monitoring_" + Math.random().toString(16).substr(2, 8)
-        };
-
-        let mqttClient;
-        let capacityChartInstance;
-
-        // ==================== LOGIN HANDLING ====================
-        function handleLogin(event) {
-            event.preventDefault();
-            const userId = document.getElementById('userId').value.trim();
-            const truckCode = document.getElementById('truckCode').value.trim();
-
-            if (userId && truckCode) {
-                userSession.userId = userId;
-                userSession.truckCode = truckCode;
-                userSession.isLoggedIn = true;
-
-                document.getElementById('displayUserId').textContent = userId;
-                document.getElementById('displayTruckId').textContent = truckCode;
-                document.getElementById('loginModal').classList.add('hidden');
-
-                initializeSystem();
-                addNotification('Login berhasil', 'Sistem monitoring dimulai', 'success');
-            }
-        }
-
-        function handleLogout() {
-            if (confirm('Yakin ingin logout?')) {
-                userSession = { userId: null, truckCode: null, isLoggedIn: false };
-                if (mqttClient && mqttClient.isConnected()) {
-                    mqttClient.disconnect();
-                }
-                location.reload();
-            }
-        }
-
-        // ==================== SYSTEM INITIALIZATION ====================
-        function initializeSystem() {
-            initMap();
-            initChart();
-            connectMQTT();
-            startClock();
-        }
-
-        // ==================== MAP INITIALIZATION ====================
-        function initMap() {
-            // Initialize Leaflet Map
-            map = L.map('map').setView(campusCenter, 16);
-
-            // Add OpenStreetMap tiles
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-
-            // Draw campus boundary polygon
-            campusPolygon = L.polygon(telkomBoundary, {
-                color: '#2E7D32',
-                fillColor: '#66BB6A',
-                fillOpacity: 0.2,
-                weight: 3
-            }).addTo(map);
-
-            campusPolygon.bindPopup("<b>Area Telkom University</b><br>Zona Operasional Truck Sampah");
-
-            // Draw predefined route
-            routePolyline = L.polyline(predefinedRoute, {
-                color: '#263238',
-                weight: 3,
-                opacity: 0.5,
-                dashArray: '10, 10'
-            }).addTo(map);
-
-            // Create custom truck icon
-            const truckIcon = L.divIcon({
-                html: '<div style="background-color: #F57C00; color: white; padding: 10px; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"><i class="fas fa-truck text-lg"></i></div>',
-                iconSize: [40, 40],
-                className: 'route-marker'
-            });
-
-            // Add truck marker
-            truckMarker = L.marker(campusCenter, { icon: truckIcon }).addTo(map);
-            truckMarker.bindPopup("<b>Truck ID: " + userSession.truckCode + "</b><br>Menunggu data GPS...");
-
-            // Add route markers
-            predefinedRoute.forEach((coord, index) => {
-                L.circleMarker(coord, {
-                    radius: 6,
-                    fillColor: '#2E7D32',
-                    color: '#fff',
-                    weight: 2,
-                    fillOpacity: 0.8
-                }).addTo(map).bindPopup(`Titik ${index + 1}`);
-            });
-        }
-
-        function centerToTruck() {
-            if (truckMarker) {
-                map.setView(truckMarker.getLatLng(), 17);
-            }
-        }
-
-        function toggleRoute() {
-            if (isRouteVisible) {
-                map.removeLayer(routePolyline);
-                isRouteVisible = false;
-            } else {
-                routePolyline.addTo(map);
-                isRouteVisible = true;
-            }
-        }
-
-        // ==================== CHART INITIALIZATION ====================
-        function initChart() {
-            const ctx = document.getElementById('capacityChart').getContext('2d');
-            capacityChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: Array(10).fill(''),
-                    datasets: [{
-                        label: 'Kapasitas (%)',
-                        data: Array(10).fill(0),
-                        backgroundColor: 'rgba(102, 187, 106, 0.2)',
-                        borderColor: '#2E7D32',
-                        borderWidth: 3,
-                        tension: 0.4,
-                        fill: true,
-                        pointBackgroundColor: '#F57C00',
-                        pointRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: {
-                            min: 0,
-                            max: 100,
-                            ticks: {
-                                callback: function(value) {
-                                    return value + '%';
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        function updateChart(value) {
-            capacityChartInstance.data.labels.shift();
-            capacityChartInstance.data.labels.push(new Date().toLocaleTimeString());
-            capacityChartInstance.data.datasets[0].data.shift();
-            capacityChartInstance.data.datasets[0].data.push(value);
-            capacityChartInstance.update('none');
-        }
-
-        // ==================== MQTT CONNECTION ====================
-        function connectMQTT() {
-            mqttClient = new Paho.MQTT.Client(
-                MQTT_CONFIG.host,
-                Number(MQTT_CONFIG.port),
-                "/mqtt",
-                MQTT_CONFIG.clientId
-            );
-
-            mqttClient.onConnectionLost = onConnectionLost;
-            mqttClient.onMessageArrived = onMessageArrived;
-
-            mqttClient.connect({
-                useSSL: true,
-                onSuccess: onMQTTConnect,
-                onFailure: onMQTTFailure,
-                keepAliveInterval: 60,
-                cleanSession: true
-            });
-        }
-
-        function onMQTTConnect() {
-            console.log("MQTT Connected");
-            document.getElementById('mqtt-status').innerHTML = '<i class="fas fa-check-circle mr-1"></i>Connected';
-            document.getElementById('mqtt-status').className = 'mt-1 text-xs px-3 py-1.5 rounded-full bg-secondary text-white font-semibold inline-block';
-            
-            mqttClient.subscribe(MQTT_CONFIG.topic);
-            addNotification('MQTT Connected', 'Terhubung ke broker HiveMQ', 'success');
-        }
-
-        function onMQTTFailure(message) {
-            console.error("MQTT Connection Failed:", message.errorMessage);
-            document.getElementById('mqtt-status').innerHTML = '<i class="fas fa-times-circle mr-1"></i>Failed';
-            document.getElementById('mqtt-status').className = 'mt-1 text-xs px-3 py-1.5 rounded-full bg-red-500 text-white font-semibold inline-block';
-            addNotification('MQTT Error', 'Gagal terhubung ke broker', 'error');
-        }
-
-        function onConnectionLost(responseObject) {
-            if (responseObject.errorCode !== 0) {
-                console.log("MQTT Connection Lost:", responseObject.errorMessage);
-                document.getElementById('mqtt-status').innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i>Disconnected';
-                document.getElementById('mqtt-status').className = 'mt-1 text-xs px-3 py-1.5 rounded-full bg-orange text-white font-semibold inline-block';
-                addNotification('Connection Lost', 'Koneksi MQTT terputus', 'warning');
-            }
-        }
-
-        // ==================== MESSAGE HANDLING ====================
-        function onMessageArrived(message) {
-            try {
-                const data = JSON.parse(message.payloadString);
-                console.log("Data received:", data);
-
-                // Update GPS coordinates
-                if (data.lat && data.lng) {
-                    const lat = parseFloat(data.lat);
-                    const lng = parseFloat(data.lng);
-                    
-                    document.getElementById('gpsCoordinates').textContent = 
-                        `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-
-                    // Update truck marker position
-                    const newPos = [lat, lng];
-                    truckMarker.setLatLng(newPos);
-                    
-                    // Add to route trail
-                    routeCoordinates.push(newPos);
-                    if (routeCoordinates.length > 1) {
-                        L.polyline(routeCoordinates, {
-                            color: '#F57C00',
-                            weight: 4,
-                            opacity: 0.7
-                        }).addTo(map);
-                    }
-
-                    // Check geofence
-                    checkGeofence(lat, lng);
-
-                    // Check route deviation
-                    checkRouteDeviation(lat, lng);
-                }
-
-                // Update ToF sensors (calculate capacity from 3 sensors)
-                if (data.tof1 !== undefined && data.tof2 !== undefined && data.tof3 !== undefined) {
-                    updateToFSensors(data.tof1, data.tof2, data.tof3);
-                }
-
-                // Update movement status
-                if (data.moving !== undefined) {
-                    updateVehicleStatus(data.moving);
-                }
-
-                // Update acceleration data
-                if (data.accX !== undefined) {
-                    // Can be used for tilt detection or movement analysis
-                }
-
-            } catch (error) {
-                console.error("Error parsing MQTT message:", error);
-                addNotification('Data Error', 'Format data tidak valid', 'error');
-            }
-        }
-
-        // ==================== DATA PROCESSING ====================
-        function updateToFSensors(tof1, tof2, tof3) {
-            // Update individual sensor displays
-            document.getElementById('tof1Value').textContent = tof1 + ' cm';
-            document.getElementById('tof2Value').textContent = tof2 + ' cm';
-            document.getElementById('tof3Value').textContent = tof3 + ' cm';
-
-            // Update progress bars (assuming max distance is 200cm)
-            const maxDist = 200;
-            document.getElementById('tof1Bar').style.width = ((maxDist - tof1) / maxDist * 100) + '%';
-            document.getElementById('tof2Bar').style.width = ((maxDist - tof2) / maxDist * 100) + '%';
-            document.getElementById('tof3Bar').style.width = ((maxDist - tof3) / maxDist * 100) + '%';
-
-            // Calculate average distance and capacity
-            const avgDist = (tof1 + tof2 + tof3) / 3;
-            document.getElementById('avgDistance').textContent = avgDist.toFixed(1) + ' cm';
-
-            // Calculate capacity percentage (200cm = 0%, 20cm = 100%)
-            const capacity = Math.max(0, Math.min(100, ((200 - avgDist) / 180) * 100));
-            updateCapacity(capacity);
-        }
-
-        function updateCapacity(percentage) {
-            const roundedPercent = Math.round(percentage);
-            
-            // Update capacity display
-            document.getElementById('capacityValue').textContent = roundedPercent + '%';
-            
-            // Update capacity bar
-            const capacityBar = document.getElementById('capacityBar');
-            capacityBar.style.width = roundedPercent + '%';
-
-            // Update color based on capacity level
-            capacityBar.className = 'h-full transition-all duration-500';
-            if (roundedPercent < 50) {
-                capacityBar.classList.add('capacity-low');
-            } else if (roundedPercent < 60) {
-                capacityBar.classList.add('capacity-medium');
-            } else if (roundedPercent < 80) {
-                capacityBar.classList.add('capacity-high');
-            } else {
-                capacityBar.classList.add('capacity-full');
-            }
-
-            // Update chart
-            updateChart(roundedPercent);
-
-            // Capacity alerts
-            if (roundedPercent >= 80 && roundedPercent < 90) {
-                addNotification('Kapasitas Tinggi', `Muatan mencapai ${roundedPercent}%`, 'warning');
-            } else if (roundedPercent >= 90) {
-                addNotification('Kapasitas Penuh', `Muatan ${roundedPercent}% - Segera kosongkan!`, 'error');
-            }
-
-            // Update target prediction
-            updateTargetPrediction(roundedPercent);
-        }
-
-        function updateVehicleStatus(isMoving) {
-            const statusText = document.getElementById('vehicleStatus');
-            const statusIndicator = document.getElementById('vehicleStatusIndicator');
-            const movementStatus = document.getElementById('movementStatus');
-
-            if (isMoving) {
-                statusText.textContent = 'Beroperasi';
-                statusIndicator.className = 'w-3 h-3 rounded-full status-active';
-                movementStatus.textContent = 'Bergerak';
-            } else {
-                statusText.textContent = 'Tidak Beroperasi';
-                statusIndicator.className = 'w-3 h-3 rounded-full status-inactive';
-                movementStatus.textContent = 'Diam';
-            }
-        }
-
-        function updateTargetPrediction(capacity) {
-            const remainingCapacity = 100 - capacity;
-            let prediction = '';
-
-            if (capacity < 30) {
-                prediction = 'Target: 5-6 titik lagi';
-            } else if (capacity < 60) {
-                prediction = 'Target: 2-3 titik lagi';
-            } else if (capacity < 80) {
-                prediction = 'Target: 1 titik lagi';
-            } else {
-                prediction = 'Segera ke TPA';
-            }
-
-            document.getElementById('targetPrediction').textContent = prediction;
-        }
-
-        // ==================== GEOFENCE CHECKING ====================
-        function checkGeofence(lat, lng) {
-            const point = [lat, lng];
-            const isInside = isPointInPolygon(point, telkomBoundary);
-
-            if (!isInside) {
-                addNotification('Peringatan Geofence', 'Truck keluar dari area Telkom University!', 'error');
-                
-                // Change marker color to red
-                truckMarker.setIcon(L.divIcon({
-                    html: '<div style="background-color: #E53935; color: white; padding: 10px; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"><i class="fas fa-truck text-lg"></i></div>',
-                    iconSize: [40, 40],
-                    className: 'route-marker'
-                }));
-            } else {
-                // Reset to orange
-                truckMarker.setIcon(L.divIcon({
-                    html: '<div style="background-color: #F57C00; color: white; padding: 10px; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"><i class="fas fa-truck text-lg"></i></div>',
-                    iconSize: [40, 40],
-                    className: 'route-marker'
-                }));
-            }
-        }
-
-        function checkRouteDeviation(lat, lng) {
-            // Calculate distance to nearest route point
-            let minDistance = Infinity;
-            predefinedRoute.forEach(routePoint => {
-                const distance = calculateDistance(lat, lng, routePoint[0], routePoint[1]);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                }
-            });
-
-            // If truck is more than 50 meters from route, alert
-            if (minDistance > 0.05) { // approximately 50 meters in degrees
-                addNotification('Peringatan Rute', 'Truck menyimpang dari jalur yang ditentukan!', 'warning');
-            }
-        }
-
-        // ==================== UTILITY FUNCTIONS ====================
-        function isPointInPolygon(point, polygon) {
-            const x = point[0], y = point[1];
-            let inside = false;
-
-            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-                const xi = polygon[i][0], yi = polygon[i][1];
-                const xj = polygon[j][0], yj = polygon[j][1];
-                
-                const intersect = ((yi > y) !== (yj > y))
-                    && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-                
-                if (intersect) inside = !inside;
-            }
-
-            return inside;
-        }
-
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Earth radius in km
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                      Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
-
-        function addNotification(title, message, type) {
-            const container = document.getElementById('notificationLog');
-            const notification = document.createElement('div');
-            
-            let borderColor = 'border-secondary';
-            let icon = 'fa-info-circle';
-            
-            if (type === 'warning') {
-                borderColor = 'border-orange';
-                icon = 'fa-exclamation-triangle';
-            } else if (type === 'error') {
-                borderColor = 'border-red-500';
-                icon = 'fa-times-circle';
-            } else if (type === 'success') {
-                borderColor = 'border-secondary';
-                icon = 'fa-check-circle';
-            }
-
-            notification.className = `p-3 bg-soft border-l-4 ${borderColor} rounded-r-lg text-xs`;
-            notification.innerHTML = `
-                <div class="flex items-start gap-2">
-                    <i class="fas ${icon} text-sm mt-0.5"></i>
-                    <div class="flex-1">
-                        <span class="font-semibold text-dark block">${title}</span>
-                        <p class="text-gray-600 mt-1">${message}</p>
-                        <span class="text-gray-400 text-xs">${new Date().toLocaleTimeString()}</span>
-                    </div>
-                </div>
-            `;
-
-            container.insertBefore(notification, container.firstChild);
-
-            // Keep only last 20 notifications
-            while (container.children.length > 20) {
-                container.removeChild(container.lastChild);
-            }
-        }
-
-        function startClock() {
-            function updateClock() {
-                const now = new Date();
-                const timeString = now.toLocaleString('id-ID', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-                document.getElementById('currentTime').textContent = timeString;
-            }
-            
-            updateClock();
-            setInterval(updateClock, 1000);
-        }
-
-        // ==================== INITIALIZATION ON LOAD ====================
-        document.addEventListener('DOMContentLoaded', function() {
-            // Show login modal on page load
-            document.getElementById('loginModal').classList.remove('hidden');
-        });
-
-    </script>
+    <!-- External JavaScript Files -->
+    <script src="js/config.js"></script>
+    <script src="js/mqtt.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/main.js"></script>
 
 </body>
 </html>
