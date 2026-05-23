@@ -9,7 +9,7 @@ const MQTT_CONFIG = {
     port: 8000,
     path: "/mqtt",
     clientId: "swms_web_" + Math.random().toString(16).substr(2, 8),
-    topic: "truck/monitoring/data",
+    topic: "truck/monitoring/data", // Will be updated based on user login
     qos: 1,
     useSSL: false,
     keepAlive: 60,
@@ -65,8 +65,7 @@ const OPERATION_CONFIG = {
 
 // ===== STORAGE KEYS =====
 const STORAGE_KEYS = {
-    trucks: 'swms_trucks',
-    activeTruck: 'swms_active_truck',
+    session: 'swms_session',
     tripHistory: 'swms_trip_history',
     logs: 'swms_logs'
 };

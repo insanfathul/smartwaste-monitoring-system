@@ -58,6 +58,15 @@ body {
     box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.05);
 }
 
+/* ===== LOGIN OVERLAY ===== */
+#login-overlay {
+    backdrop-filter: blur(5px);
+}
+
+#login-overlay.hidden {
+    display: none;
+}
+
 /* ===== LEAFLET MAP ===== */
 #map {
     width: 100%;
@@ -95,25 +104,6 @@ body {
     background-color: #1B5E20 !important;
 }
 
-/* ===== TRUCK CARD ===== */
-.truck-card {
-    padding: 12px;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    transition: all 0.2s;
-}
-
-.truck-card:hover {
-    border-color: var(--primary-green);
-    box-shadow: 0 2px 8px rgba(46, 125, 50, 0.1);
-}
-
-.truck-card.active {
-    border-color: var(--primary-green);
-    background: #f0f9f0;
-}
-
 /* ===== CAPACITY COLOR INDICATORS ===== */
 .capacity-green {
     background-color: var(--secondary-green) !important;
@@ -145,6 +135,21 @@ body {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
     aside {
@@ -170,4 +175,9 @@ body {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* ===== HIDDEN CLASS ===== */
+.hidden {
+    display: none !important;
 }

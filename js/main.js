@@ -8,6 +8,14 @@ function initApp() {
     console.log("=== Smart Waste Monitoring System ===");
     console.log("Initializing...");
     
+    // Check authentication first
+    const isLoggedIn = checkAuth();
+    
+    if (!isLoggedIn) {
+        console.log("User not logged in. Showing login screen...");
+        return;
+    }
+    
     // Initialize map
     initMap();
     
@@ -17,46 +25,21 @@ function initApp() {
     // Initialize MQTT connection
     initMQTT();
     
-    // Load truck list
-    displayTruckList();
-    
     // Start time update
     updateCurrentTime();
     
     console.log("System ready!");
-    addLog("✓ Sistem Smart Waste Monitoring System aktif dan siap beroperasi", "success");
+    
+    const user = getCurrentUser();
+    addLog(`✓ Sistem aktif - ${user.name} (${user.truckId})`, "success");
 }
 
 // ===== RUN ON PAGE LOAD =====
-window.addEventListener('DOMContentLoad', initApp);
+window.addEventListener('load', initApp);
 
-// Fallback if DOMContentLoaded already fired
+// Fallback
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);
 } else {
     initApp();
 }
-
-// ===== SIMULATE DATA (FOR TESTING ONLY) =====
-// Uncomment this to test without actual hardware
-/*
-function simulateData() {
-    setInterval(() => {
-        const fakeData = {
-            lat: -6.9744 + (Math.random() - 0.5) * 0.01,
-            lng: 107.6316 + (Math.random() - 0.5) * 0.01,
-            tof1: 50 + Math.random() * 100,
-            tof2: 50 + Math.random() * 100,
-            tof3: 50 + Math.random() * 100,
-            imu: (Math.random() - 0.5) * 20,
-            gsm: -60 - Math.random() * 40,
-            moving: Math.random() > 0.5
-        };
-        
-        processIncomingData(fakeData);
-    }, 3000);
-}
-
-// Uncomment to activate simulation
-// setTimeout(simulateData, 2000);
-*/

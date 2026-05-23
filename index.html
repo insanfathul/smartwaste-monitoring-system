@@ -21,6 +21,59 @@
 </head>
 <body class="flex h-screen overflow-hidden">
     
+    <!-- LOGIN OVERLAY -->
+    <div id="login-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl soft-shadow p-8 w-full max-w-md">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-green-dark rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-leaf text-white text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-dark-text">Smart Waste Monitoring</h2>
+                <p class="text-sm text-gray-500 mt-2">Telkom University</p>
+            </div>
+            
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-dark-text mb-2">
+                            <i class="fa-solid fa-user mr-2 text-green-dark"></i>User ID
+                        </label>
+                        <input type="text" id="login-userid" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-dark focus:outline-none"
+                               placeholder="Masukkan User ID">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-dark-text mb-2">
+                            <i class="fa-solid fa-key mr-2 text-green-dark"></i>Kode Akses
+                        </label>
+                        <input type="password" id="login-code" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-dark focus:outline-none"
+                               placeholder="Masukkan Kode Akses">
+                    </div>
+                    
+                    <div id="login-error" class="hidden p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+                        <i class="fa-solid fa-exclamation-circle mr-2"></i>
+                        <span id="login-error-text">User ID atau Kode Akses salah!</span>
+                    </div>
+                    
+                    <button type="submit" 
+                            class="w-full bg-green-dark text-white py-3 rounded-lg hover:bg-green-600 transition font-medium">
+                        <i class="fa-solid fa-sign-in-alt mr-2"></i>Login
+                    </button>
+                </div>
+            </form>
+            
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <p class="text-xs text-gray-500 text-center">
+                    💡 <b>Demo Credentials:</b><br>
+                    User ID: <code class="bg-gray-100 px-2 py-1 rounded">admin</code> | 
+                    Kode: <code class="bg-gray-100 px-2 py-1 rounded">1234</code>
+                </p>
+            </div>
+        </div>
+    </div>
+    
     <!-- SIDEBAR -->
     <aside id="sidebar" class="w-64 bg-green-dark text-white flex flex-col justify-between soft-shadow z-10">
         <div>
@@ -33,27 +86,40 @@
                 </div>
             </div>
             
+            <!-- User Info Card -->
+            <div class="p-4 mx-4 mt-4 bg-green-600 rounded-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+                        <i class="fa-solid fa-user text-green-dark"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold" id="user-name">User</p>
+                        <p class="text-xs text-green-200" id="user-truck">Truck ID: -</p>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Navigation Menu -->
-            <nav class="p-4 space-y-2">
+            <nav class="p-4 space-y-2 mt-4">
                 <a href="#dashboard" onclick="switchView('dashboard')" 
                    class="nav-link flex items-center gap-4 px-4 py-3 bg-green-600 rounded-xl transition duration-200">
                     <i class="fa-solid fa-map-location-dot w-5"></i>
                     <span class="text-sm font-medium">Live Tracking</span>
                 </a>
-                <a href="#trucks" onclick="switchView('trucks')" 
-                   class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-green-600 rounded-xl transition duration-200">
-                    <i class="fa-solid fa-truck w-5"></i>
-                    <span class="text-sm font-medium">Manajemen Truck</span>
-                </a>
-                <a href="#routes" onclick="switchView('routes')" 
-                   class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-green-600 rounded-xl transition duration-200">
-                    <i class="fa-solid fa-route w-5"></i>
-                    <span class="text-sm font-medium">Rute & Marking</span>
-                </a>
                 <a href="#analytics" onclick="switchView('analytics')" 
                    class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-green-600 rounded-xl transition duration-200">
                     <i class="fa-solid fa-chart-pie w-5"></i>
                     <span class="text-sm font-medium">Analitik</span>
+                </a>
+                <a href="#history" onclick="switchView('history')" 
+                   class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-green-600 rounded-xl transition duration-200">
+                    <i class="fa-solid fa-history w-5"></i>
+                    <span class="text-sm font-medium">Riwayat</span>
+                </a>
+                <a href="#" onclick="handleLogout()" 
+                   class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-red-600 rounded-xl transition duration-200">
+                    <i class="fa-solid fa-sign-out-alt w-5"></i>
+                    <span class="text-sm font-medium">Logout</span>
                 </a>
             </nav>
         </div>
@@ -94,50 +160,8 @@
 
         <!-- DASHBOARD CONTENT -->
         <div id="dashboard-view" class="p-8 space-y-6 flex-1">
-            
-            <!-- ROW 1: TRUCK REGISTRATION FORM -->
-            <div class="bg-white p-6 rounded-2xl soft-shadow">
-                <h3 class="font-semibold text-dark-text mb-4">
-                    <i class="fa-solid fa-truck-ramp-box text-green-dark mr-2"></i>
-                    Registrasi Truck Sampah
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-2">User ID</label>
-                        <input type="text" id="input-userid" 
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-dark focus:outline-none"
-                               placeholder="Masukkan User ID">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-2">Kode Truck</label>
-                        <input type="text" id="input-truckcode" 
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-dark focus:outline-none"
-                               placeholder="Contoh: TS-01">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-2">Nama Driver</label>
-                        <input type="text" id="input-driver" 
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-dark focus:outline-none"
-                               placeholder="Nama Driver">
-                    </div>
-                    <div class="flex items-end">
-                        <button onclick="registerTruck()" 
-                                class="w-full px-4 py-2 bg-green-dark text-white rounded-lg hover:bg-green-600 transition">
-                            <i class="fa-solid fa-plus mr-2"></i>Tambah Truck
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Truck List -->
-                <div class="mt-4">
-                    <h4 class="text-sm font-semibold text-dark-text mb-2">Daftar Truck Terdaftar:</h4>
-                    <div id="truck-list" class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <!-- Truck items will be inserted here -->
-                    </div>
-                </div>
-            </div>
 
-            <!-- ROW 2: STATUS CARDS -->
+            <!-- ROW 1: STATUS CARDS -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 
                 <!-- Card: Kapasitas -->
@@ -205,7 +229,7 @@
 
             </div>
 
-            <!-- ROW 3: MAP & NOTIFICATIONS -->
+            <!-- ROW 2: MAP & NOTIFICATIONS -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 <!-- Live Map -->
@@ -262,7 +286,7 @@
 
             </div>
 
-            <!-- ROW 4: CHARTS -->
+            <!-- ROW 3: CHARTS -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
                 <!-- Chart: Kapasitas -->
@@ -308,6 +332,7 @@
 
     <!-- External JavaScript Files -->
     <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/mqtt.js"></script>
     <script src="js/map.js"></script>
     <script src="js/ui.js"></script>

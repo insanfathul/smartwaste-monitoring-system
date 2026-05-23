@@ -143,120 +143,8 @@ function updateCurrentTime() {
 // Update time every second
 setInterval(updateCurrentTime, 1000);
 
-// ===== TRUCK REGISTRATION =====
-function registerTruck() {
-    const userId = document.getElementById('input-userid').value.trim();
-    const truckCode = document.getElementById('input-truckcode').value.trim();
-    const driver = document.getElementById('input-driver').value.trim();
-    
-    if (!userId || !truckCode || !driver) {
-        alert('Semua field harus diisi!');
-        return;
-    }
-    
-    const truck = {
-        id: Date.now(),
-        userId: userId,
-        code: truckCode,
-        driver: driver,
-        registered: new Date().toISOString()
-    };
-    
-    // Save to localStorage
-    let trucks = getTrucks();
-    trucks.push(truck);
-    localStorage.setItem(STORAGE_KEYS.trucks, JSON.stringify(trucks));
-    
-    // Clear inputs
-    document.getElementById('input-userid').value = '';
-    document.getElementById('input-truckcode').value = '';
-    document.getElementById('input-driver').value = '';
-    
-    // Refresh list
-    displayTruckList();
-    
-    addLog(`✓ Truck ${truckCode} berhasil didaftarkan (Driver: ${driver})`, "success");
-}
-
-// ===== GET TRUCKS FROM STORAGE =====
-function getTrucks() {
-    const data = localStorage.getItem(STORAGE_KEYS.trucks);
-    return data ? JSON.parse(data) : [];
-}
-
-// ===== GET ACTIVE TRUCK =====
-function getActiveTruck() {
-    const activeId = localStorage.getItem(STORAGE_KEYS.activeTruck);
-    if (!activeId) return null;
-    
-    const trucks = getTrucks();
-    return trucks.find(t => t.id == activeId) || null;
-}
-
-// ===== SET ACTIVE TRUCK =====
-function setActiveTruck(truckId) {
-    localStorage.setItem(STORAGE_KEYS.activeTruck, truckId);
-    displayTruckList();
-    
-    const truck = getTrucks().find(t => t.id == truckId);
-    if (truck) {
-        addLog(`Truck aktif: ${truck.code}`, "info");
-        clearTraveledPath(); // Clear previous path
-    }
-}
-
-// ===== DELETE TRUCK =====
-function deleteTruck(truckId) {
-    if (!confirm('Yakin hapus truck ini?')) return;
-    
-    let trucks = getTrucks();
-    trucks = trucks.filter(t => t.id != truckId);
-    localStorage.setItem(STORAGE_KEYS.trucks, JSON.stringify(trucks));
-    
-    // If active truck deleted, clear active
-    if (localStorage.getItem(STORAGE_KEYS.activeTruck) == truckId) {
-        localStorage.removeItem(STORAGE_KEYS.activeTruck);
-    }
-    
-    displayTruckList();
-    addLog("Truck dihapus dari sistem", "warning");
-}
-
-// ===== DISPLAY TRUCK LIST =====
-function displayTruckList() {
-    const container = document.getElementById('truck-list');
-    if (!container) return;
-    
-    const trucks = getTrucks();
-    const activeId = localStorage.getItem(STORAGE_KEYS.activeTruck);
-    
-    if (trucks.length === 0) {
-        container.innerHTML = '<p class="text-sm text-gray-500 col-span-3">Belum ada truck terdaftar</p>';
-        return;
-    }
-    
-    container.innerHTML = trucks.map(truck => `
-        <div class="truck-card ${truck.id == activeId ? 'active' : ''}" onclick="setActiveTruck(${truck.id})">
-            <div class="flex justify-between items-start">
-                <div class="flex-1">
-                    <h4 class="font-semibold text-dark-text text-sm">${truck.code}</h4>
-                    <p class="text-xs text-gray-500 mt-1">Driver: ${truck.driver}</p>
-                    <p class="text-xs text-gray-400">User: ${truck.userId}</p>
-                </div>
-                <button onclick="event.stopPropagation(); deleteTruck(${truck.id})" 
-                        class="text-red-500 hover:text-red-700 text-xs">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-            </div>
-            ${truck.id == activeId ? '<span class="text-xs bg-green-dark text-white px-2 py-1 rounded mt-2 inline-block">Aktif</span>' : ''}
-        </div>
-    `).join('');
-}
-
 // ===== VIEW SWITCHING =====
 function switchView(viewName) {
-    // This function can be expanded for multiple views
-    // Currently only dashboard view exists
     console.log("Switching to view:", viewName);
     
     // Update active nav
@@ -264,10 +152,7 @@ function switchView(viewName) {
         link.classList.remove('active', 'bg-green-600');
     });
     
-    event.target.closest('.nav-link').classList.add('active', 'bg-green-600');
+    if (event && event.target) {
+        event.target.closest('.nav-link').classList.add('active', 'bg-green-600');
+    }
 }
-
-// Initialize truck list on load
-document.addEventListener('DOMContentLoaded', function() {
-    displayTruckList();
-});
