@@ -33,3 +33,6 @@ function initApp() {
     const user = getCurrentUser();
     addLog(`✓ Sistem aktif - ${user.name} (${user.truckId})`, "success");
 }
+
+// Automatically initialize app on load
+document.addEventListener('DOMContentLoaded', initApp);

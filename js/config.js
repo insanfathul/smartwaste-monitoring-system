@@ -6,7 +6,7 @@
 // ===== MQTT CONFIGURATION =====
 const MQTT_CONFIG = {
     host: "broker.hivemq.com",
-    port: 8000,  // WebSocket port untuk HiveMQ (bukan 1883)
+    port: 8884,  // WebSocket Secure (WSS) port untuk HiveMQ (karena browser memerlukan WSS pada HTTPS, sedangkan hardware menggunakan TCP 1883)
     path: "/mqtt",
     clientId: "swms_web_" + Math.random().toString(16).substr(2, 8),
     
@@ -14,9 +14,9 @@ const MQTT_CONFIG = {
     username: "cd_monitoring_armadatrucksampah",
     password: "CU7g.9MVkgD2!WA",
     
-    topic: "truck/monitoring/data", // Default topic, akan diupdate per user
+    topic: "truck/monitoring/data", // Topic utama, disamakan persis dengan hardware
     qos: 1,
-    useSSL: true,  // HiveMQ WebSocket menggunakan SSL di port 8000
+    useSSL: true,  // HiveMQ WebSocket menggunakan SSL di port 8884 (WSS)
     keepAlive: 60,
     cleanSession: true
 };

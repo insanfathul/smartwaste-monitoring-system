@@ -207,7 +207,7 @@
         <div id="dashboard-view" class="p-8 space-y-6 flex-1">
 
             <!-- ROW 1: STATUS CARDS -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
                 
                 <!-- Card: Kapasitas -->
                 <div class="bg-white p-5 rounded-2xl soft-shadow border-l-4 border-orange-custom flex items-center justify-between">
@@ -269,6 +269,20 @@
                     </div>
                     <div class="w-11 h-11 bg-purple-100 rounded-xl flex items-center justify-center text-purple-500 text-xl">
                         <i class="fa-solid fa-signal"></i>
+                    </div>
+                </div>
+
+                <!-- Card: Koneksi MQTT -->
+                <div id="mqtt-card" class="bg-white p-5 rounded-2xl soft-shadow border-l-4 border-orange-custom flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Koneksi MQTT</p>
+                        <h3 id="val-mqtt-status" class="text-lg font-bold text-dark-text mt-1">Menghubungkan...</h3>
+                        <span id="mqtt-status-indicator" class="text-xs px-2 py-1 rounded bg-orange-custom text-white mt-2 inline-block animate-pulse">
+                            Connecting
+                        </span>
+                    </div>
+                    <div id="mqtt-icon-container" class="w-11 h-11 bg-orange-100 rounded-xl flex items-center justify-center text-orange-custom text-xl">
+                        <i class="fa-solid fa-wifi animate-pulse"></i>
                     </div>
                 </div>
 

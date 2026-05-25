@@ -40,6 +40,7 @@ function initMQTT() {
         // Connect
         mqttClient.connect(connectOptions);
         
+        updateMQTTStatus("Connecting", "bg-orange-custom");
         addLog("Menghubungkan ke MQTT Broker HiveMQ...", "info");
         console.log("MQTT Config:", {
             host: MQTT_CONFIG.host,
@@ -187,10 +188,51 @@ function calculateCapacity(distance) {
 
 // ===== UPDATE MQTT STATUS DISPLAY =====
 function updateMQTTStatus(text, colorClass) {
+    // 1. Update status in sidebar footer
     const statusEl = document.getElementById('mqtt-status');
     if (statusEl) {
-        statusEl.textContent = text;
-        statusEl.className = `text-xs px-2 py-1 mt-1 rounded text-white font-semibold ${colorClass}`;
+        statusEl.textContent = text === "Connected" ? "Connected" : (text === "Connecting" ? "Connecting..." : text);
+        statusEl.className = `block text-xs px-2 py-1 mt-1 rounded text-white font-semibold ${colorClass}`;
+    }
+
+    // 2. Update status card in dashboard
+    const cardEl = document.getElementById('mqtt-card');
+    const valEl = document.getElementById('val-mqtt-status');
+    const indicatorEl = document.getElementById('mqtt-status-indicator');
+    const iconContainerEl = document.getElementById('mqtt-icon-container');
+
+    if (cardEl && valEl && indicatorEl && iconContainerEl) {
+        let statusText = "Menghubungkan...";
+        let indicatorText = "Connecting";
+        let cardBorderClass = "border-orange-custom";
+        let indicatorBgClass = "bg-orange-custom";
+        let iconContainerClass = "bg-orange-100 text-orange-custom";
+        let iconHTML = '<i class="fa-solid fa-wifi animate-pulse"></i>';
+
+        if (text === "Connected") {
+            statusText = "Terhubung";
+            indicatorText = "Online";
+            cardBorderClass = "border-green-light";
+            indicatorBgClass = "bg-green-light";
+            iconContainerClass = "bg-green-100 text-green-light";
+            iconHTML = '<i class="fa-solid fa-wifi"></i>';
+        } else if (text === "Disconnected" || text === "Failed") {
+            statusText = "Terputus";
+            indicatorText = "Offline";
+            cardBorderClass = "border-red-500";
+            indicatorBgClass = "bg-red-500";
+            iconContainerClass = "bg-red-100 text-red-500";
+            iconHTML = '<i class="fa-solid fa-wifi-slash"></i>';
+        }
+
+        valEl.textContent = statusText;
+        indicatorEl.textContent = indicatorText;
+        
+        // Update styling classes dynamically
+        cardEl.className = `bg-white p-5 rounded-2xl soft-shadow border-l-4 ${cardBorderClass} flex items-center justify-between`;
+        indicatorEl.className = `text-xs px-2 py-1 rounded text-white mt-2 inline-block ${indicatorBgClass} ${text === "Connecting" ? "animate-pulse" : ""}`;
+        iconContainerEl.className = `w-11 h-11 rounded-xl flex items-center justify-center text-xl ${iconContainerClass}`;
+        iconContainerEl.innerHTML = iconHTML;
     }
 }
 

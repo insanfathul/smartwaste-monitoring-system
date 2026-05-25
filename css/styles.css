@@ -46,6 +46,14 @@ body {
     background-color: var(--orange-accent);
 }
 
+.border-green-light {
+    border-color: var(--secondary-green) !important;
+}
+
+.border-orange-custom {
+    border-color: var(--orange-accent) !important;
+}
+
 .bg-soft-bg {
     background-color: var(--soft-bg);
 }

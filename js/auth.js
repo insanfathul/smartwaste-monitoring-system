@@ -74,6 +74,9 @@ function loginSuccess(user) {
     setTimeout(() => {
         overlay.classList.add('hidden');
         overlay.style.animation = '';
+        if (typeof initApp === 'function') {
+            initApp();
+        }
     }, 300);
     
     // Update user info in sidebar
@@ -82,11 +85,8 @@ function loginSuccess(user) {
     // Add success log
     addLog(`✓ Login berhasil! Selamat datang, ${user.name}`, "success");
     
-    // Subscribe to truck-specific MQTT topic if not operator
-    if (user.truckId !== 'ALL') {
-        MQTT_CONFIG.topic = `truck/monitoring/${user.truckId}`;
-        addLog(`Listening to topic: ${MQTT_CONFIG.topic}`, "info");
-    }
+    // Subscribe to MQTT topic (menggunakan topic utama dari hardware)
+    addLog(`Berlangganan topic hardware: ${MQTT_CONFIG.topic}`, "info");
 }
 
 // ===== LOGIN FAILED =====
@@ -135,10 +135,8 @@ function checkAuth() {
         // Hide login overlay
         document.getElementById('login-overlay').classList.add('hidden');
         
-        // Update MQTT topic for specific truck
-        if (user.truckId !== 'ALL') {
-            MQTT_CONFIG.topic = `truck/monitoring/${user.truckId}`;
-        }
+        // Menggunakan topic utama dari hardware
+        // MQTT_CONFIG.topic tetap menggunakan 'truck/monitoring/data' agar cocok dengan hardware
         
         return true;
     } catch (error) {
