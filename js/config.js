@@ -1,4 +1,3 @@
-
 /* ===================================
    CONFIGURATION FILE
    Smart Waste Monitoring System
@@ -7,12 +6,17 @@
 // ===== MQTT CONFIGURATION =====
 const MQTT_CONFIG = {
     host: "broker.hivemq.com",
-    port: 8884,
+    port: 8000,  // WebSocket port untuk HiveMQ (bukan 1883)
     path: "/mqtt",
     clientId: "swms_web_" + Math.random().toString(16).substr(2, 8),
-    topic: "truck/monitoring/data",
+    
+    // Kredensial sesuai hardware
+    username: "cd_monitoring_armadatrucksampah",
+    password: "CU7g.9MVkgD2!WA",
+    
+    topic: "truck/monitoring/data", // Default topic, akan diupdate per user
     qos: 1,
-    useSSL: true,
+    useSSL: true,  // HiveMQ WebSocket menggunakan SSL di port 8000
     keepAlive: 60,
     cleanSession: true
 };
@@ -40,11 +44,11 @@ const WASTE_POINTS = [
         id: "WP-01",
         name: "Gedung Rektorat",
         location: [-6.9744, 107.6316],
-        type: "building", // building, canteen, dormitory, public
-        capacity: 240, // liter
-        priority: "high", // high, medium, low
-        schedule: ["06:00", "14:00"], // jam pengambilan
-        status: "pending" // pending, collected, skipped
+        type: "building",
+        capacity: 240,
+        priority: "high",
+        schedule: ["06:00", "14:00"],
+        status: "pending"
     },
     {
         id: "WP-02",
@@ -138,72 +142,68 @@ const WASTE_POINTS = [
     }
 ];
 
-// ===== PREDEFINED ROUTES (RUTE-RUTE YANG TERSEDIA) =====
+// ===== PREDEFINED ROUTES =====
 const ROUTE_TEMPLATES = {
-    // Rute Pagi (Morning Route)
     morning: {
         id: "ROUTE-MORNING",
         name: "Rute Pagi (06:00 - 10:00)",
         description: "Pengambilan sampah area gedung dan asrama pagi hari",
-        color: "#F57C00", // Orange
+        color: "#F57C00",
         startTime: "06:00",
         endTime: "10:00",
         waypoints: [
-            { pointId: "WP-08", order: 1 }, // Asrama Putra
-            { pointId: "WP-09", order: 2 }, // Asrama Putri
-            { pointId: "WP-01", order: 3 }, // Rektorat
-            { pointId: "WP-02", order: 4 }, // Selaru
-            { pointId: "WP-03", order: 5 }, // Parkir Utara
-            { pointId: "WP-04", order: 6 }  // Kantin Utara
+            { pointId: "WP-08", order: 1 },
+            { pointId: "WP-09", order: 2 },
+            { pointId: "WP-01", order: 3 },
+            { pointId: "WP-02", order: 4 },
+            { pointId: "WP-03", order: 5 },
+            { pointId: "WP-04", order: 6 }
         ],
-        estimatedDuration: 120, // minutes
+        estimatedDuration: 120,
         status: "active"
     },
     
-    // Rute Siang (Afternoon Route)
     afternoon: {
         id: "ROUTE-AFTERNOON",
         name: "Rute Siang (12:00 - 16:00)",
         description: "Pengambilan sampah kantin dan area publik",
-        color: "#2E7D32", // Green
+        color: "#2E7D32",
         startTime: "12:00",
         endTime: "16:00",
         waypoints: [
-            { pointId: "WP-04", order: 1 }, // Kantin Utara
-            { pointId: "WP-10", order: 2 }, // Kantin Selatan
-            { pointId: "WP-05", order: 3 }, // GKU
-            { pointId: "WP-02", order: 4 }, // Selaru
-            { pointId: "WP-07", order: 5 }  // Sport Center
+            { pointId: "WP-04", order: 1 },
+            { pointId: "WP-10", order: 2 },
+            { pointId: "WP-05", order: 3 },
+            { pointId: "WP-02", order: 4 },
+            { pointId: "WP-07", order: 5 }
         ],
         estimatedDuration: 90,
         status: "active"
     },
     
-    // Rute Sore (Evening Route)
     evening: {
         id: "ROUTE-EVENING",
         name: "Rute Sore (15:00 - 18:00)",
         description: "Pengambilan sampah akhir hari",
-        color: "#1976D2", // Blue
+        color: "#1976D2",
         startTime: "15:00",
         endTime: "18:00",
         waypoints: [
-            { pointId: "WP-04", order: 1 }, // Kantin Utara
-            { pointId: "WP-10", order: 2 }, // Kantin Selatan
-            { pointId: "WP-08", order: 3 }, // Asrama Putra
-            { pointId: "WP-09", order: 4 }, // Asrama Putri
-            { pointId: "WP-07", order: 5 }  // Sport Center
+            { pointId: "WP-04", order: 1 },
+            { pointId: "WP-10", order: 2 },
+            { pointId: "WP-08", order: 3 },
+            { pointId: "WP-09", order: 4 },
+            { pointId: "WP-07", order: 5 }
         ],
         estimatedDuration: 90,
         status: "active"
     },
     
-    // Rute Custom (dapat ditambah sesuai kebutuhan)
     custom: {
         id: "ROUTE-CUSTOM",
         name: "Rute Custom",
         description: "Rute yang dapat disesuaikan manual",
-        color: "#9C27B0", // Purple
+        color: "#9C27B0",
         waypoints: [],
         status: "inactive"
     }

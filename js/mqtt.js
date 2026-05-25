@@ -20,19 +20,33 @@ function initMQTT() {
         mqttClient.onConnectionLost = onMQTTConnectionLost;
         mqttClient.onMessageArrived = onMQTTMessageArrived;
 
-        // Connection options
+        // Connection options dengan username & password
         const connectOptions = {
             useSSL: MQTT_CONFIG.useSSL,
             onSuccess: onMQTTConnect,
             onFailure: onMQTTFailure,
             keepAliveInterval: MQTT_CONFIG.keepAlive,
-            cleanSession: MQTT_CONFIG.cleanSession
+            cleanSession: MQTT_CONFIG.cleanSession,
+            
+            // Tambahkan kredensial MQTT
+            userName: MQTT_CONFIG.username,
+            password: MQTT_CONFIG.password,
+            
+            // Reconnect options
+            reconnect: true,
+            timeout: 10
         };
 
         // Connect
         mqttClient.connect(connectOptions);
         
         addLog("Menghubungkan ke MQTT Broker HiveMQ...", "info");
+        console.log("MQTT Config:", {
+            host: MQTT_CONFIG.host,
+            port: MQTT_CONFIG.port,
+            username: MQTT_CONFIG.username,
+            useSSL: MQTT_CONFIG.useSSL
+        });
     } catch (error) {
         console.error("MQTT Init Error:", error);
         addLog("Error inisialisasi MQTT: " + error.message, "error");
@@ -68,7 +82,7 @@ function onMQTTFailure(error) {
     console.error("MQTT Connection Failed:", error);
     
     updateMQTTStatus("Failed", "bg-red-500");
-    addLog("✗ Koneksi MQTT gagal: " + error.errorMessage, "error");
+    addLog("✗ Koneksi MQTT gagal: " + (error.errorMessage || "Unknown error"), "error");
     
     // Retry after 5 seconds
     setTimeout(initMQTT, 5000);
@@ -116,8 +130,10 @@ function processIncomingData(data) {
     //   "timestamp": 1234567890
     // }
     
+    console.log("Processing data:", data);
+    
     // Calculate average capacity from 3 ToF sensors
-    if (data.tof1 && data.tof2 && data.tof3) {
+    if (data.tof1 !== undefined && data.tof2 !== undefined && data.tof3 !== undefined) {
         const avgDistance = (data.tof1 + data.tof2 + data.tof3) / 3;
         const capacityPercent = calculateCapacity(avgDistance);
         updateCapacityDisplay(capacityPercent);
@@ -125,7 +141,7 @@ function processIncomingData(data) {
     }
     
     // Update GPS position
-    if (data.lat && data.lng) {
+    if (data.lat !== undefined && data.lng !== undefined) {
         const coords = [data.lat, data.lng];
         updateGPSDisplay(data.lat, data.lng);
         updateTruckPosition(coords);
@@ -151,8 +167,12 @@ function processIncomingData(data) {
         updateOperationStatus(data.moving);
     }
     
-    // Add info log
-    addLog(`Data diterima - Kapasitas: ${calculateCapacity((data.tof1+data.tof2+data.tof3)/3).toFixed(1)}%, GPS: Valid`, "info");
+    // Add info log (batasi frekuensi log)
+    const now = Date.now();
+    if (!window.lastLogTime || now - window.lastLogTime > 10000) {
+        addLog(`Data diterima - Kapasitas: ${calculateCapacity((data.tof1+data.tof2+data.tof3)/3).toFixed(1)}%, GPS: Valid`, "info");
+        window.lastLogTime = now;
+    }
 }
 
 // ===== CALCULATE CAPACITY PERCENTAGE =====
@@ -178,6 +198,7 @@ function updateMQTTStatus(text, colorClass) {
 function publishMQTT(topic, payload) {
     if (!isConnected) {
         console.warn("MQTT not connected");
+        addLog("MQTT belum terkoneksi, tidak bisa publish", "warning");
         return false;
     }
     
@@ -185,10 +206,13 @@ function publishMQTT(topic, payload) {
         const message = new Paho.MQTT.Message(JSON.stringify(payload));
         message.destinationName = topic;
         message.qos = MQTT_CONFIG.qos;
+        message.retained = false;
         mqttClient.send(message);
+        console.log("Published to:", topic, payload);
         return true;
     } catch (error) {
         console.error("Publish error:", error);
+        addLog("Error publish MQTT: " + error.message, "error");
         return false;
     }
 }
