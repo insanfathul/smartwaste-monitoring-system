@@ -6,6 +6,13 @@
 // ===== PREDEFINED USERS DATABASE =====
 const USERS_DATABASE = [
     {
+        userId: "armadatruck_1",
+        code: "truck01",
+        name: "Armada Truck 1",
+        truckId: "TRUCK_01",
+        role: "driver"
+    },
+    {
         userId: "admin",
         code: "1234",
         name: "Administrator",
