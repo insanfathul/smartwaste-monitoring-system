@@ -37,6 +37,14 @@ function initMap() {
     loadActiveRoute();
     
     addLog("Peta dimuat. Area: Telkom University", "success");
+
+    // Force Leaflet to recalculate dimensions to prevent blank/grey layout errors
+    setTimeout(() => {
+        if (map) {
+            map.invalidateSize();
+            map.setView(MAP_CONFIG.center, MAP_CONFIG.zoom);
+        }
+    }, 400);
 }
 
 // ===== DRAW CAMPUS GEOFENCE =====
