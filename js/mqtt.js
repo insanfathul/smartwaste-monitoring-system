@@ -133,6 +133,16 @@ function processIncomingData(data) {
     
     console.log("Processing data:", data);
     
+    // Sinkronisasi data masuk dengan truck ID dari user yang sedang login
+    const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    if (currentUser && currentUser.truckId !== 'ALL') {
+        const incomingTruckId = data.truck_id || data.truckId || data.id;
+        if (incomingTruckId && incomingTruckId.toString().toUpperCase() !== currentUser.truckId.toUpperCase()) {
+            console.log(`Data diabaikan: milik truck ${incomingTruckId}, sedangkan user aktif memantau ${currentUser.truckId}`);
+            return;
+        }
+    }
+    
     // Calculate average capacity from 3 ToF sensors
     if (data.tof1 !== undefined && data.tof2 !== undefined && data.tof3 !== undefined) {
         const avgDistance = (data.tof1 + data.tof2 + data.tof3) / 3;
