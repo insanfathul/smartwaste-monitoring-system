@@ -64,19 +64,19 @@ const char GPRS_USER[] = "";             // Kosongkan jika tidak ada
 const char GPRS_PASS[] = "";             // Kosongkan jika tidak ada
 
 /* ============================================================
-   KONFIGURASI MQTT - HARUS SAMA DENGAN config.js di WEB
+   KONFIGURASI MQTT - HiveMQ Cloud
    ============================================================
-   Web menggunakan  : port 8884 (WSS / WebSocket Secure)
-   ESP32 (SIM800L)  : port 1883 (TCP biasa) - SIM800L tidak support TLS
-   Keduanya ke broker yang SAMA → data mengalir dari ESP32 ke Web
+   Web pakai port 8884 (WSS), ESP32+SIM800L pakai port 8883 (MQTT TLS)
+   Keduanya ke cluster HiveMQ Cloud yang SAMA
+   PENTING: Ganti [YOUR-CLUSTER-URL] dengan URL dari Overview HiveMQ Cloud
    ============================================================ */
-const char MQTT_HOST[]     = "broker.hivemq.com";
-const int  MQTT_PORT       = 1883;                          // TCP - untuk SIM800L
+const char MQTT_HOST[]     = "ad88ee6f121e4c71933d6feb4208621a.s1.eu.hivemq.cloud"; // ← ganti dgn Cluster URL
+const int  MQTT_PORT       = 8883;           // MQTT over TLS - WAJIB untuk HiveMQ Cloud
 const char MQTT_USERNAME[] = "cd_monitoring_armadatrucksampah";
 const char MQTT_PASSWORD[] = "CU7g.9MVkgD2!WA";
-const char MQTT_TOPIC[]    = "truck/monitoring/data";       // Harus sama dengan web
-const char MQTT_CLIENT_ID[]= "ESP32_TRUCK01";               // Unik per device
-const char TRUCK_ID[]      = "TRUCK_01";                    // Harus cocok dengan truckId di auth.js web
+const char MQTT_TOPIC[]    = "truck/monitoring/data";
+const char MQTT_CLIENT_ID[]= "ESP32_TRUCK01";
+const char TRUCK_ID[]      = "TRUCK_01";     // Harus cocok dengan truckId di auth.js web
 
 /* ============================================================
    KONFIGURASI SENSOR
@@ -103,9 +103,9 @@ const char TRUCK_ID[]      = "TRUCK_01";                    // Harus cocok denga
 HardwareSerial sim800lSerial(1);
 HardwareSerial gpsSerial(2);
 
-TinyGsm       modem(sim800lSerial);
-TinyGsmClient gsmClient(modem);
-PubSubClient  mqtt(gsmClient);
+TinyGsm             modem(sim800lSerial);
+TinyGsmClientSecure gsmClient(modem);  // ← Secure client WAJIB untuk HiveMQ Cloud (port 8883 TLS)
+PubSubClient        mqtt(gsmClient);
 
 TinyGPSPlus   gps;
 
@@ -205,8 +205,7 @@ bool connectMQTT() {
 
     Serial.print("[MQTT] Connecting to HiveMQ...");
 
-    // broker.hivemq.com adalah public broker
-    // Username/password dikirim tapi tidak diverifikasi secara ketat
+    // HiveMQ Cloud - credentials WAJIB dan diverifikasi
     bool connected = mqtt.connect(
         MQTT_CLIENT_ID,
         MQTT_USERNAME,
