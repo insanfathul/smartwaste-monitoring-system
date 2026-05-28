@@ -70,8 +70,8 @@ const char GPRS_PASS[] = "";             // Kosongkan jika tidak ada
    Keduanya ke cluster HiveMQ Cloud yang SAMA
    PENTING: Ganti [YOUR-CLUSTER-URL] dengan URL dari Overview HiveMQ Cloud
    ============================================================ */
-const char MQTT_HOST[]     = "ad88ee6f121e4c71933d6feb4208621a.s1.eu.hivemq.cloud"; // ← ganti dgn Cluster URL
-const int  MQTT_PORT       = 8883;           // MQTT over TLS - WAJIB untuk HiveMQ Cloud
+const char MQTT_HOST[]     = "ad88ee6f121e4c71933d6feb4208621a.s1.eu.hivemq.cloud";
+const int  MQTT_PORT       = 8883;           // MQTT over TLS - HiveMQ Cloud
 const char MQTT_USERNAME[] = "cd_monitoring_armadatrucksampah";
 const char MQTT_PASSWORD[] = "CU7g.9MVkgD2!WA";
 const char MQTT_TOPIC[]    = "truck/monitoring/data";

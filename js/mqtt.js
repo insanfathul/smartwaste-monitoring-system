@@ -16,41 +16,36 @@ function initMQTT() {
             MQTT_CONFIG.clientId
         );
 
-        // Set callbacks
         mqttClient.onConnectionLost = onMQTTConnectionLost;
         mqttClient.onMessageArrived = onMQTTMessageArrived;
 
-        // Connection options dengan username & password
         const connectOptions = {
             useSSL: MQTT_CONFIG.useSSL,
             onSuccess: onMQTTConnect,
             onFailure: onMQTTFailure,
             keepAliveInterval: MQTT_CONFIG.keepAlive,
             cleanSession: MQTT_CONFIG.cleanSession,
-            
-            // Tambahkan kredensial MQTT
             userName: MQTT_CONFIG.username,
             password: MQTT_CONFIG.password,
-            
-            // Reconnect options
-            reconnect: true,
-            timeout: 10
+            reconnect: false,   // Matikan auto-reconnect Paho, gunakan manual retry
+            timeout: 15         // Naikkan timeout jadi 15 detik untuk HiveMQ Cloud
         };
 
-        // Connect
         mqttClient.connect(connectOptions);
-        
+
         updateMQTTStatus("Connecting", "bg-orange-custom");
-        addLog("Menghubungkan ke MQTT Broker HiveMQ...", "info");
-        console.log("MQTT Config:", {
-            host: MQTT_CONFIG.host,
-            port: MQTT_CONFIG.port,
+        addLog("Menghubungkan ke HiveMQ Cloud...", "info");
+
+        console.log("[MQTT] Connecting to:", {
+            url: `wss://${MQTT_CONFIG.host}:${MQTT_CONFIG.port}${MQTT_CONFIG.path}`,
             username: MQTT_CONFIG.username,
-            useSSL: MQTT_CONFIG.useSSL
+            useSSL: MQTT_CONFIG.useSSL,
+            clientId: MQTT_CONFIG.clientId
         });
     } catch (error) {
-        console.error("MQTT Init Error:", error);
+        console.error("[MQTT] Init Error:", error);
         addLog("Error inisialisasi MQTT: " + error.message, "error");
+        setTimeout(initMQTT, 8000);
     }
 }
 
@@ -80,13 +75,33 @@ function onMQTTConnect() {
 // ===== ON MQTT CONNECTION FAILED =====
 function onMQTTFailure(error) {
     isConnected = false;
-    console.error("MQTT Connection Failed:", error);
-    
+
+    // Decode error code untuk debugging
+    const errorCodes = {
+        0: "OK",
+        1: "Unacceptable protocol version",
+        2: "Client ID rejected",
+        3: "Server unavailable",
+        4: "Bad username or password",
+        5: "Not authorized",
+        7: "Connection timeout / TLS handshake failed",
+        8: "WebSocket error"
+    };
+    const codeLabel = errorCodes[error.errorCode] || `Unknown (code: ${error.errorCode})`;
+
+    console.error("[MQTT] Connection Failed:", {
+        errorCode: error.errorCode,
+        errorMessage: error.errorMessage,
+        decoded: codeLabel,
+        host: MQTT_CONFIG.host,
+        port: MQTT_CONFIG.port
+    });
+
     updateMQTTStatus("Failed", "bg-red-500");
-    addLog("✗ Koneksi MQTT gagal: " + (error.errorMessage || "Unknown error"), "error");
-    
-    // Retry after 5 seconds
-    setTimeout(initMQTT, 5000);
+    addLog(`✗ MQTT gagal [${error.errorCode}]: ${error.errorMessage || codeLabel}`, "error");
+
+    // Retry setelah 8 detik
+    setTimeout(initMQTT, 8000);
 }
 
 // ===== ON MQTT CONNECTION LOST =====

@@ -4,22 +4,18 @@
    =================================== */
 
 // ===== MQTT CONFIGURATION =====
-// PENTING: Gunakan HiveMQ Cloud cluster URL dari tab Overview di console.hivemq.cloud
-// Ganti [YOUR-CLUSTER-URL] dengan URL yang ada di Overview → "Cluster URL"
-// Contoh format: ad88ee6f121e4c71933d6feb4208621a.s1.eu.hivemq.cloud
+// Broker: HiveMQ Cloud (Free #1) - Telkom University
+// Web  → port 8884 WSS  |  ESP32+SIM800L → port 8883 TLS
 const MQTT_CONFIG = {
-    host: "ad88ee6f121e4c71933d6feb4208621a.s1.eu.hivemq.cloud", // ← ganti dgn Cluster URL dari Overview HiveMQ Cloud
-    port: 8884,   // Port WSS HiveMQ Cloud (WebSocket Secure) - SAMA untuk public maupun cloud
+    host: "ad88ee6f121e4c71933d6feb4208621a.s1.eu.hivemq.cloud",
+    port: 8884,        // WebSocket Secure (WSS) - untuk browser
     path: "/mqtt",
     clientId: "swms_web_" + Math.random().toString(16).substr(2, 8),
-
-    // Kredensial - harus sama dengan yang didaftarkan di Access Management HiveMQ Cloud
     username: "cd_monitoring_armadatrucksampah",
     password: "CU7g.9MVkgD2!WA",
-
     topic: "truck/monitoring/data",
     qos: 1,
-    useSSL: true,   // WAJIB true untuk HiveMQ Cloud
+    useSSL: true,
     keepAlive: 60,
     cleanSession: true
 };
