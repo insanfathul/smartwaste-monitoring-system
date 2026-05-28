@@ -189,3 +189,31 @@ body {
 .hidden {
     display: none !important;
 }
+
+/* ===== LEAFLET ROUTING MACHINE - HIDE INSTRUCTION PANEL ===== */
+.leaflet-routing-container,
+.leaflet-routing-container-hide,
+.leaflet-routing-error {
+    display: none !important;
+}
+
+.leaflet-routing-collapse-btn {
+    display: none !important;
+}
+
+/* Route line highlight on hover */
+.leaflet-interactive.route-line:hover {
+    stroke-width: 8;
+    opacity: 1;
+}
+
+/* Truck marker pulse animation */
+@keyframes truckPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(245, 124, 0, 0.7); }
+    70%  { box-shadow: 0 0 0 12px rgba(245, 124, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 124, 0, 0); }
+}
+
+.custom-truck-marker > div {
+    animation: truckPulse 2s infinite;
+}

@@ -1,12 +1,15 @@
 /* ===================================
-   LEAFLET MAP HANDLER WITH ROUTES
+   LEAFLET MAP HANDLER WITH ROUTING MACHINE
    Smart Waste Monitoring System
+   - Rute mengikuti jalan nyata via OSRM
+   - Rute pagi otomatis tampil saat peta dibuka
    =================================== */
 
 let map = null;
 let truckMarker = null;
 let campusPolygon = null;
-let routePolyline = null;
+let routingControl = null;   // Leaflet Routing Machine control (gantikan routePolyline)
+let routePolyline = null;    // Fallback jika OSRM tidak tersedia
 let traveledPolyline = null;
 let traveledCoords = [];
 let showingRoute = false;
@@ -15,36 +18,26 @@ let currentRoute = null;
 
 // ===== INITIALIZE MAP =====
 function initMap() {
-    // Create map centered on Telkom University
     map = L.map('map').setView(MAP_CONFIG.center, MAP_CONFIG.zoom);
-    
-    // Add OpenStreetMap tiles
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19
     }).addTo(map);
-    
-    // Draw campus boundary (geofence)
+
     drawCampusBoundary();
-    
-    // Draw waste collection points
     drawWastePoints();
-    
-    // Create truck marker
     createTruckMarker();
-    
-    // Load saved active route
-    loadActiveRoute();
-    
+
     addLog("Peta dimuat. Area: Telkom University", "success");
 
-    // Force Leaflet to recalculate dimensions to prevent blank/grey layout errors
     setTimeout(() => {
         if (map) {
             map.invalidateSize();
-            map.setView(MAP_CONFIG.center, MAP_CONFIG.zoom);
+            // Auto-load rute default (pagi) setiap kali peta dibuka
+            loadActiveRoute();
         }
-    }, 400);
+    }, 600);
 }
 
 // ===== DRAW CAMPUS GEOFENCE =====
@@ -52,127 +45,107 @@ function drawCampusBoundary() {
     campusPolygon = L.polygon(MAP_CONFIG.campusBoundary, {
         color: '#2E7D32',
         fillColor: '#66BB6A',
-        fillOpacity: 0.15,
-        weight: 3
+        fillOpacity: 0.12,
+        weight: 3,
+        dashArray: '6, 4'
     }).addTo(map);
-    
+
     campusPolygon.bindPopup(`
-        <b>Telkom University</b><br>
-        <small>Zona Operasional Truck Sampah</small>
+        <div style="font-family:Poppins,sans-serif;min-width:180px;">
+            <b style="color:#2E7D32;font-size:14px;">Telkom University</b><br>
+            <small style="color:#666;">Jl. Telekomunikasi No.1, Bandung</small><br>
+            <small style="color:#888;">Zona Operasional Truck Sampah</small>
+        </div>
     `);
 }
 
 // ===== DRAW WASTE COLLECTION POINTS =====
 function drawWastePoints() {
-    // Clear existing markers
     wastePointMarkers.forEach(marker => map.removeLayer(marker));
     wastePointMarkers = [];
-    
-    // Get waste points from storage or use default
+
     let points = getWastePoints();
-    
-    points.forEach((point, index) => {
+
+    points.forEach((point) => {
         const iconConfig = POINT_ICONS[point.type] || POINT_ICONS.public;
-        
-        // Create custom icon based on type
+
         const wasteIcon = L.divIcon({
             html: `
                 <div style="
-                    background-color: ${iconConfig.color}; 
-                    color: white; 
-                    padding: 8px; 
-                    border-radius: 50%; 
-                    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                    background-color: ${iconConfig.color};
+                    color: white;
+                    padding: 8px;
+                    border-radius: 50%;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
                     text-align: center;
                     border: 3px solid white;
                     position: relative;
+                    width: 36px;
+                    height: 36px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                 ">
-                    <i class="fa-solid ${iconConfig.icon}"></i>
-                    ${point.status === 'collected' ? 
-                        '<div style="position:absolute;top:-5px;right:-5px;background:#4CAF50;width:12px;height:12px;border-radius:50%;border:2px solid white;"></div>' 
+                    <i class="fa-solid ${iconConfig.icon}" style="font-size:14px;"></i>
+                    ${point.status === 'collected' ?
+                        '<div style="position:absolute;top:-5px;right:-5px;background:#4CAF50;width:13px;height:13px;border-radius:50%;border:2px solid white;"></div>'
                         : ''}
                 </div>
             `,
-            iconSize: [35, 35],
+            iconSize: [36, 36],
+            iconAnchor: [18, 18],
             className: 'custom-waste-marker'
         });
-        
-        const marker = L.marker(point.location, {icon: wasteIcon}).addTo(map);
-        
-        // Create popup content
+
+        const marker = L.marker(point.location, { icon: wasteIcon }).addTo(map);
+
         const popupContent = `
-            <div class="waste-point-popup">
-                <h4 style="margin:0 0 8px 0;color:#263238;font-weight:600;">${point.name}</h4>
-                <div style="font-size:12px;color:#666;">
-                    <p style="margin:4px 0;">
-                        <i class="fa-solid fa-tag" style="width:16px;color:#2E7D32;"></i>
-                        <b>ID:</b> ${point.id}
-                    </p>
-                    <p style="margin:4px 0;">
-                        <i class="fa-solid fa-dumpster" style="width:16px;color:#F57C00;"></i>
-                        <b>Kapasitas:</b> ${point.capacity}L
-                    </p>
-                    <p style="margin:4px 0;">
-                        <i class="fa-solid fa-flag" style="width:16px;color:#1976D2;"></i>
-                        <b>Prioritas:</b> ${point.priority.toUpperCase()}
-                    </p>
-                    <p style="margin:4px 0;">
-                        <i class="fa-solid fa-clock" style="width:16px;color:#757575;"></i>
-                        <b>Jadwal:</b> ${point.schedule.join(', ')}
-                    </p>
-                    <p style="margin:4px 0;">
-                        <i class="fa-solid fa-circle" style="width:16px;color:${point.status === 'collected' ? '#4CAF50' : '#FFC107'};"></i>
-                        <b>Status:</b> ${getStatusText(point.status)}
-                    </p>
+            <div style="font-family:Poppins,sans-serif;min-width:200px;">
+                <h4 style="margin:0 0 8px 0;color:#263238;font-weight:600;font-size:13px;">${point.name}</h4>
+                <div style="font-size:11px;color:#666;line-height:1.8;">
+                    <p style="margin:2px 0;"><i class="fa-solid fa-tag" style="width:16px;color:#2E7D32;"></i> <b>ID:</b> ${point.id}</p>
+                    <p style="margin:2px 0;"><i class="fa-solid fa-dumpster" style="width:16px;color:#F57C00;"></i> <b>Kapasitas:</b> ${point.capacity}L</p>
+                    <p style="margin:2px 0;"><i class="fa-solid fa-flag" style="width:16px;color:#1976D2;"></i> <b>Prioritas:</b> ${point.priority.toUpperCase()}</p>
+                    <p style="margin:2px 0;"><i class="fa-solid fa-clock" style="width:16px;color:#757575;"></i> <b>Jadwal:</b> ${point.schedule.join(', ')}</p>
+                    <p style="margin:2px 0;"><i class="fa-solid fa-circle" style="width:16px;color:${point.status === 'collected' ? '#4CAF50' : '#FFC107'};"></i> <b>Status:</b> ${getStatusText(point.status)}</p>
                 </div>
                 <div style="margin-top:10px;display:flex;gap:5px;">
-                    ${point.status !== 'collected' ? 
-                        `<button onclick="markAsCollected('${point.id}')" 
-                                style="flex:1;background:#4CAF50;color:white;border:none;padding:6px;border-radius:4px;cursor:pointer;font-size:11px;">
+                    ${point.status !== 'collected' ?
+                        `<button onclick="markAsCollected('${point.id}')"
+                                style="flex:1;background:#4CAF50;color:white;border:none;padding:6px 4px;border-radius:4px;cursor:pointer;font-size:11px;font-family:Poppins,sans-serif;">
                             <i class="fa-solid fa-check"></i> Collected
                         </button>` : ''}
-                    <button onclick="showPointDetails('${point.id}')" 
-                            style="flex:1;background:#2E7D32;color:white;border:none;padding:6px;border-radius:4px;cursor:pointer;font-size:11px;">
+                    <button onclick="showPointDetails('${point.id}')"
+                            style="flex:1;background:#2E7D32;color:white;border:none;padding:6px 4px;border-radius:4px;cursor:pointer;font-size:11px;font-family:Poppins,sans-serif;">
                         <i class="fa-solid fa-info"></i> Detail
                     </button>
                 </div>
             </div>
         `;
-        
-        marker.bindPopup(popupContent);
+
+        marker.bindPopup(popupContent, { maxWidth: 240 });
         wastePointMarkers.push(marker);
     });
-    
+
     addLog(`${points.length} titik pengambilan sampah ditampilkan`, "info");
 }
 
 // ===== GET STATUS TEXT =====
 function getStatusText(status) {
-    const statusMap = {
-        'pending': 'Belum Diambil',
-        'collected': 'Sudah Diambil',
-        'skipped': 'Dilewati'
-    };
-    return statusMap[status] || status;
+    return { pending: 'Belum Diambil', collected: 'Sudah Diambil', skipped: 'Dilewati' }[status] || status;
 }
 
 // ===== MARK POINT AS COLLECTED =====
 function markAsCollected(pointId) {
     let points = getWastePoints();
     const point = points.find(p => p.id === pointId);
-    
     if (point) {
         point.status = 'collected';
         point.collectedAt = new Date().toISOString();
         saveWastePoints(points);
         drawWastePoints();
-        
-        addLog(`✓ ${point.name} ditandai sebagai sudah diambil`, "success");
-        
-        // Check if route is completed
-        if (currentRoute) {
-            checkRouteCompletion();
-        }
+        addLog(`✓ ${point.name} ditandai sudah diambil`, "success");
+        if (currentRoute) checkRouteCompletion();
     }
 }
 
@@ -180,149 +153,295 @@ function markAsCollected(pointId) {
 function showPointDetails(pointId) {
     const points = getWastePoints();
     const point = points.find(p => p.id === pointId);
-    
     if (point) {
         alert(`Detail Titik Pengambilan:\n\n` +
-              `ID: ${point.id}\n` +
-              `Nama: ${point.name}\n` +
-              `Tipe: ${point.type}\n` +
-              `Kapasitas: ${point.capacity}L\n` +
-              `Prioritas: ${point.priority}\n` +
-              `Jadwal: ${point.schedule.join(', ')}\n` +
-              `Status: ${getStatusText(point.status)}\n` +
-              `Koordinat: ${point.location[0]}, ${point.location[1]}`
-        );
+              `ID: ${point.id}\nNama: ${point.name}\nTipe: ${point.type}\n` +
+              `Kapasitas: ${point.capacity}L\nPrioritas: ${point.priority}\n` +
+              `Jadwal: ${point.schedule.join(', ')}\nStatus: ${getStatusText(point.status)}\n` +
+              `Koordinat: ${point.location[0]}, ${point.location[1]}`);
     }
 }
 
 // ===== CREATE TRUCK MARKER =====
 function createTruckMarker() {
     const truckIcon = L.divIcon({
-        html: `<div style="background-color: #F57C00; color: white; padding: 10px; 
-                border-radius: 50%; box-shadow: 0 3px 6px rgba(0,0,0,0.3); 
-                text-align:center; border: 3px solid white;">
-                <i class="fa-solid fa-truck-moving"></i></div>`,
-        iconSize: [40, 40],
+        html: `<div style="background-color:#F57C00;color:white;padding:10px;
+                border-radius:50%;box-shadow:0 3px 8px rgba(0,0,0,0.4);
+                text-align:center;border:3px solid white;width:42px;height:42px;
+                display:flex;align-items:center;justify-content:center;">
+                <i class="fa-solid fa-truck-moving" style="font-size:16px;"></i></div>`,
+        iconSize: [42, 42],
+        iconAnchor: [21, 21],
         className: 'custom-truck-marker'
     });
-    
-    truckMarker = L.marker(MAP_CONFIG.center, {icon: truckIcon}).addTo(map);
+
+    // Posisi awal = titik pertama rute pagi (Asrama Putra)
+    const startPos = MAP_CONFIG.center;
+    truckMarker = L.marker(startPos, { icon: truckIcon, zIndexOffset: 1000 }).addTo(map);
     truckMarker.bindPopup(`
-        <b>Truck Sampah</b><br>
-        <small>Menunggu data GPS...</small>
+        <div style="font-family:Poppins,sans-serif;">
+            <b>Truck Sampah</b><br>
+            <small>Menunggu data GPS dari ESP32-S3...</small>
+        </div>
     `);
 }
 
-// ===== DRAW ROUTE ON MAP =====
+// ===== DRAW ROUTE MENGGUNAKAN LEAFLET ROUTING MACHINE =====
+// Rute akan mengikuti jalan nyata di Telkom University via OSRM
 function drawRoute(routeKey) {
-    // Remove existing route
+    // Hapus routing control lama
+    if (routingControl) {
+        try { map.removeControl(routingControl); } catch(e) {}
+        routingControl = null;
+    }
     if (routePolyline) {
         map.removeLayer(routePolyline);
+        routePolyline = null;
     }
-    
+
+    // Hapus order markers lama
+    map.eachLayer(layer => {
+        if (layer.options && layer.options.className === 'route-order-marker') {
+            map.removeLayer(layer);
+        }
+    });
+
     const route = ROUTE_TEMPLATES[routeKey];
     if (!route) {
         addLog("Rute tidak ditemukan", "error");
         return;
     }
-    
-    // Get waypoint coordinates
+
     const points = getWastePoints();
-    const coordinates = route.waypoints.map(wp => {
-        const point = points.find(p => p.id === wp.pointId);
-        return point ? point.location : null;
-    }).filter(coord => coord !== null);
-    
-    if (coordinates.length === 0) {
-        addLog("Tidak ada koordinat valid untuk rute ini", "error");
+    const latlngs = route.waypoints
+        .map(wp => {
+            const point = points.find(p => p.id === wp.pointId);
+            return point ? L.latLng(point.location[0], point.location[1]) : null;
+        })
+        .filter(ll => ll !== null);
+
+    if (latlngs.length < 2) {
+        addLog("Koordinat tidak cukup untuk rute ini", "error");
         return;
     }
-    
-    // Draw polyline
-    routePolyline = L.polyline(coordinates, {
-        color: route.color,
-        weight: 5,
-        opacity: 0.7,
-        dashArray: '10, 10'
-    }).addTo(map);
-    
-    // Add route markers with numbers
-    route.waypoints.forEach((wp, index) => {
-        const point = points.find(p => p.id === wp.pointId);
-        if (point) {
-            const orderIcon = L.divIcon({
-                html: `<div style="
-                    background: ${route.color};
-                    color: white;
-                    border: 2px solid white;
-                    border-radius: 50%;
-                    width: 25px;
-                    height: 25px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-weight: bold;
-                    font-size: 12px;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-                ">${index + 1}</div>`,
-                iconSize: [25, 25],
-                className: 'route-order-marker'
-            });
-            
-            L.marker(point.location, {icon: orderIcon}).addTo(map)
-                .bindPopup(`<b>Stop ${index + 1}</b><br>${point.name}`);
-        }
-    });
-    
-    // Fit map to route bounds
-    map.fitBounds(routePolyline.getBounds(), {padding: [50, 50]});
-    
-    // Save as active route
-    currentRoute = route;
-    localStorage.setItem(STORAGE_KEYS.activeRoute, JSON.stringify(route));
-    
+
+    // Buat routing control dengan OSRM (mengikuti jalan nyata)
+    try {
+        routingControl = L.Routing.control({
+            waypoints: latlngs,
+            routeWhileDragging: false,
+            addWaypoints: false,
+            draggableWaypoints: false,
+            fitSelectedRoutes: false,
+            show: false,
+            collapsible: false,
+            lineOptions: {
+                styles: [{
+                    color: route.color,
+                    opacity: 0.88,
+                    weight: 6
+                }],
+                extendToWaypoints: true,
+                missingRouteTolerance: 0
+            },
+            router: new L.Routing.OSRMv1({
+                serviceUrl: 'https://router.project-osrm.org/route/v1',
+                profile: 'driving',
+                useHints: false
+            }),
+            createMarker: function(i, waypoint) {
+                const wpData = route.waypoints[i];
+                const wastePoint = wpData ? points.find(p => p.id === wpData.pointId) : null;
+
+                const isFirst = (i === 0);
+                const isLast = (i === latlngs.length - 1);
+                let bg = route.color;
+                let label = `${i + 1}`;
+                if (isFirst) label = 'S';   // Start
+                if (isLast)  label = 'F';   // Finish
+
+                const orderIcon = L.divIcon({
+                    html: `<div style="
+                        background: ${bg};
+                        color: white;
+                        border: 2.5px solid white;
+                        border-radius: 50%;
+                        width: 30px;
+                        height: 30px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: 700;
+                        font-size: 12px;
+                        box-shadow: 0 2px 7px rgba(0,0,0,0.45);
+                        font-family: Poppins, sans-serif;
+                    ">${label}</div>`,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15],
+                    className: 'route-order-marker'
+                });
+
+                const m = L.marker(waypoint.latLng, { icon: orderIcon });
+                if (wastePoint) {
+                    m.bindPopup(`
+                        <div style="font-family:Poppins,sans-serif;font-size:12px;">
+                            <b>Stop ${i + 1}: ${wastePoint.name}</b><br>
+                            <small>${wastePoint.type} | Prioritas: ${wastePoint.priority}</small>
+                        </div>
+                    `);
+                }
+                return m;
+            }
+        }).addTo(map);
+
+        routingControl.on('routesfound', function(e) {
+            // Sembunyikan panel instruksi LRM
+            const container = routingControl.getContainer();
+            if (container) container.style.display = 'none';
+
+            const r = e.routes[0];
+            const distKm  = (r.summary.totalDistance / 1000).toFixed(1);
+            const durMin  = Math.round(r.summary.totalTime / 60);
+
+            // Fit peta ke bounds rute
+            if (r.bounds) {
+                map.fitBounds(r.bounds, { padding: [60, 60] });
+            }
+
+            updateActiveRouteInfo(route, distKm, durMin);
+            addLog(`Rute "${route.name}" berhasil dimuat via jalan nyata (${distKm}km, ~${durMin} menit)`, "success");
+        });
+
+        routingControl.on('routingerror', function(e) {
+            console.warn("OSRM routing error, pakai mode fallback:", e.error.message);
+            addLog(`OSRM tidak tersedia, rute ditampilkan mode offline`, "warning");
+            drawRouteFallback(route, points);
+        });
+
+    } catch (err) {
+        console.warn("LRM tidak tersedia, pakai fallback:", err);
+        drawRouteFallback(route, points);
+    }
+
+    // Simpan rute aktif ke localStorage
+    currentRoute = { ...route, key: routeKey };
+    localStorage.setItem(STORAGE_KEYS.activeRoute, JSON.stringify(currentRoute));
+
     showingRoute = true;
-    document.getElementById('route-btn-text').textContent = "Sembunyikan Rute";
-    
-    addLog(`Rute "${route.name}" ditampilkan (${route.waypoints.length} titik)`, "success");
+    const btnText = document.getElementById('route-btn-text');
+    if (btnText) btnText.textContent = "Sembunyikan Rute";
+
+    updateActiveRouteInfo(route);
 }
 
-// ===== LOAD ACTIVE ROUTE =====
+// ===== FALLBACK: Rute garis lurus jika OSRM tidak tersedia =====
+function drawRouteFallback(route, points) {
+    if (routePolyline) {
+        map.removeLayer(routePolyline);
+    }
+
+    const coords = route.waypoints
+        .map(wp => {
+            const p = points.find(pt => pt.id === wp.pointId);
+            return p ? p.location : null;
+        })
+        .filter(c => c !== null);
+
+    routePolyline = L.polyline(coords, {
+        color: route.color,
+        weight: 6,
+        opacity: 0.8,
+        dashArray: '12, 8'
+    }).addTo(map);
+
+    // Tambah urutan stop
+    route.waypoints.forEach((wp, i) => {
+        const p = points.find(pt => pt.id === wp.pointId);
+        if (!p) return;
+        const icon = L.divIcon({
+            html: `<div style="background:${route.color};color:white;border:2px solid white;border-radius:50%;
+                width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+                font-weight:700;font-size:11px;box-shadow:0 2px 5px rgba(0,0,0,0.4);">${i + 1}</div>`,
+            iconSize: [26, 26],
+            iconAnchor: [13, 13],
+            className: 'route-order-marker'
+        });
+        L.marker(p.location, { icon }).addTo(map)
+            .bindPopup(`<b>Stop ${i + 1}</b><br>${p.name}`);
+    });
+
+    map.fitBounds(routePolyline.getBounds(), { padding: [60, 60] });
+    updateActiveRouteInfo(route, null, route.estimatedDuration);
+}
+
+// ===== UPDATE INFO RUTE DI SIDEBAR =====
+function updateActiveRouteInfo(route, distKm, durMin) {
+    const infoEl = document.getElementById('active-route-info');
+    if (!infoEl) return;
+
+    const distText = distKm ? `${distKm} km` : '-';
+    const durText  = durMin  ? `~${durMin} mnt`
+                   : route.estimatedDuration ? `~${route.estimatedDuration} mnt` : '-';
+
+    infoEl.innerHTML = `
+        <div style="border-left:3px solid ${route.color};padding-left:8px;margin-bottom:8px;">
+            <p class="font-semibold text-white text-xs mb-1">${route.name}</p>
+            <p class="text-green-200" style="font-size:10px;line-height:1.6;">
+                ${route.waypoints.length} titik &nbsp;|&nbsp; ${distText} &nbsp;|&nbsp; ${durText}
+            </p>
+            ${route.startTime ? `<p class="text-green-300" style="font-size:10px;">${route.startTime} – ${route.endTime}</p>` : ''}
+        </div>
+        <button onclick="showRouteSelectionModal()"
+                class="w-full bg-white text-green-dark py-2 rounded-lg hover:bg-gray-100 transition"
+                style="font-size:11px;font-weight:600;">
+            <i class="fa-solid fa-exchange-alt mr-1"></i> Ganti Rute
+        </button>
+    `;
+}
+
+// ===== LOAD ACTIVE ROUTE (auto-load rute pagi jika belum ada tersimpan) =====
 function loadActiveRoute() {
     const saved = localStorage.getItem(STORAGE_KEYS.activeRoute);
     if (saved) {
         try {
-            currentRoute = JSON.parse(saved);
-            // Find route key
-            const routeKey = Object.keys(ROUTE_TEMPLATES).find(
-                key => ROUTE_TEMPLATES[key].id === currentRoute.id
-            );
-            if (routeKey) {
+            const savedRoute = JSON.parse(saved);
+            const routeKey = savedRoute.key ||
+                Object.keys(ROUTE_TEMPLATES).find(k => ROUTE_TEMPLATES[k].id === savedRoute.id);
+            if (routeKey && ROUTE_TEMPLATES[routeKey]) {
                 drawRoute(routeKey);
+                return;
             }
-        } catch (error) {
-            console.error("Error loading route:", error);
+        } catch (err) {
+            console.warn("Error loading saved route:", err);
         }
     }
+    // Default: tampilkan rute pagi secara otomatis
+    const defaultKey = (MAP_CONFIG && MAP_CONFIG.defaultRoute) || 'morning';
+    drawRoute(defaultKey);
 }
 
 // ===== TOGGLE ROUTE VISIBILITY =====
 function toggleRoute() {
-    if (showingRoute && routePolyline) {
-        map.removeLayer(routePolyline);
-        showingRoute = false;
-        document.getElementById('route-btn-text').textContent = "Tampilkan Rute";
-        
-        // Remove order markers
+    if (showingRoute) {
+        if (routingControl) {
+            try { map.removeControl(routingControl); } catch(e) {}
+            routingControl = null;
+        }
+        if (routePolyline) {
+            map.removeLayer(routePolyline);
+            routePolyline = null;
+        }
         map.eachLayer(layer => {
-            if (layer.options.className === 'route-order-marker') {
+            if (layer.options && layer.options.className === 'route-order-marker') {
                 map.removeLayer(layer);
             }
         });
-        
+
+        showingRoute = false;
+        const btnText = document.getElementById('route-btn-text');
+        if (btnText) btnText.textContent = "Tampilkan Rute";
         addLog("Rute disembunyikan", "info");
     } else {
-        // Show route selection modal
         showRouteSelectionModal();
     }
 }
@@ -332,111 +451,95 @@ function showRouteSelectionModal() {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50';
     modal.id = 'route-modal';
-    
+
     const routes = Object.keys(ROUTE_TEMPLATES).map(key => {
         const route = ROUTE_TEMPLATES[key];
         if (route.status !== 'active') return '';
-        
         return `
-            <div onclick="selectRoute('${key}')" 
+            <div onclick="selectRoute('${key}')"
                  class="p-4 bg-white border-2 border-gray-200 rounded-lg cursor-pointer hover:border-green-dark transition">
                 <div class="flex items-center gap-3">
-                    <div style="width:20px;height:20px;background:${route.color};border-radius:50%;"></div>
+                    <div style="width:20px;height:20px;background:${route.color};border-radius:50%;flex-shrink:0;"></div>
                     <div class="flex-1">
-                        <h4 class="font-semibold text-dark-text">${route.name}</h4>
+                        <h4 class="font-semibold text-dark-text text-sm">${route.name}</h4>
                         <p class="text-xs text-gray-500">${route.description}</p>
                         <p class="text-xs text-gray-400 mt-1">
-                            <i class="fa-solid fa-clock mr-1"></i>${route.startTime} - ${route.endTime} 
-                            | <i class="fa-solid fa-location-dot mr-1"></i>${route.waypoints.length} titik
+                            <i class="fa-solid fa-clock mr-1"></i>${route.startTime || '-'} – ${route.endTime || '-'}
+                            &nbsp;|&nbsp; <i class="fa-solid fa-location-dot mr-1"></i>${route.waypoints.length} titik
                         </p>
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     }).join('');
-    
+
     modal.innerHTML = `
         <div class="bg-white rounded-2xl p-6 w-full max-w-2xl soft-shadow">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-bold text-dark-text">
-                    <i class="fa-solid fa-route text-green-dark mr-2"></i>
-                    Pilih Rute Operasional
+                    <i class="fa-solid fa-route text-green-dark mr-2"></i>Pilih Rute Operasional
                 </h3>
                 <button onclick="closeRouteModal()" class="text-gray-400 hover:text-gray-600">
                     <i class="fa-solid fa-times text-xl"></i>
                 </button>
             </div>
-            <div class="space-y-3 max-h-96 overflow-y-auto">
-                ${routes}
-            </div>
+            <div class="space-y-3 max-h-96 overflow-y-auto">${routes}</div>
             <div class="mt-4 pt-4 border-t border-gray-200">
-                <button onclick="showRouteBuilder()" 
+                <button onclick="showRouteBuilder()"
                         class="w-full bg-green-dark text-white py-2 rounded-lg hover:bg-green-600 transition">
                     <i class="fa-solid fa-plus mr-2"></i>Buat Rute Custom
                 </button>
             </div>
-        </div>
-    `;
-    
+        </div>`;
+
     document.body.appendChild(modal);
 }
 
-// ===== SELECT ROUTE =====
 function selectRoute(routeKey) {
     closeRouteModal();
     drawRoute(routeKey);
 }
 
-// ===== CLOSE ROUTE MODAL =====
 function closeRouteModal() {
     const modal = document.getElementById('route-modal');
-    if (modal) {
-        modal.remove();
-    }
+    if (modal) modal.remove();
 }
 
 // ===== CHECK ROUTE COMPLETION =====
 function checkRouteCompletion() {
     if (!currentRoute) return;
-    
     const points = getWastePoints();
-    const routePoints = currentRoute.waypoints.map(wp => 
-        points.find(p => p.id === wp.pointId)
-    );
-    
+    const routePoints = currentRoute.waypoints.map(wp => points.find(p => p.id === wp.pointId));
     const completed = routePoints.filter(p => p && p.status === 'collected').length;
     const total = routePoints.length;
-    
+
     if (completed === total) {
         addLog(`🎉 Rute "${currentRoute.name}" selesai! (${total}/${total} titik)`, "success");
-        // Could trigger completion actions here
     } else {
         addLog(`Progress rute: ${completed}/${total} titik selesai`, "info");
     }
 }
 
-// ===== UPDATE TRUCK POSITION =====
+// ===== UPDATE TRUCK POSITION (dari data GPS MQTT) =====
 function updateTruckPosition(coords) {
     if (!truckMarker) return;
-    
+
     truckMarker.setLatLng(coords);
-    
-    const activeTruck = getCurrentUser();
+
+    const user = getCurrentUser();
     const capacity = document.getElementById('val-capacity')?.textContent || '0%';
-    
+
     truckMarker.setPopupContent(`
-        <b>${activeTruck ? activeTruck.truckId : 'Truck'}</b><br>
-        <small>Kapasitas: ${capacity}</small><br>
-        <small>Lat: ${coords[0].toFixed(5)}, Lng: ${coords[1].toFixed(5)}</small>
+        <div style="font-family:Poppins,sans-serif;">
+            <b>${user ? user.truckId : 'Truck'}</b><br>
+            <small>Kapasitas: ${capacity}</small><br>
+            <small>GPS: ${coords[0].toFixed(5)}, ${coords[1].toFixed(5)}</small>
+        </div>
     `);
-    
+
     traveledCoords.push(coords);
-    if (!traveledPolyline) {
-        initTraveledPath();
-    }
+    if (!traveledPolyline) initTraveledPath();
     traveledPolyline.setLatLngs(traveledCoords);
-    
-    // Check proximity to waste points
+
     checkProximityToWastePoints(coords);
 }
 
@@ -452,13 +555,11 @@ function initTraveledPath() {
 // ===== CHECK PROXIMITY TO WASTE POINTS =====
 function checkProximityToWastePoints(coords) {
     const points = getWastePoints();
-    const proximityThreshold = 30; // meters
-    
+    const threshold = 30; // meter
     points.forEach(point => {
-        const distance = calculateDistance(coords, point.location);
-        
-        if (distance < proximityThreshold && point.status === 'pending') {
-            addLog(`📍 Mendekati titik: ${point.name} (${distance.toFixed(0)}m)`, "info");
+        const dist = calculateDistance(coords, point.location);
+        if (dist < threshold && point.status === 'pending') {
+            addLog(`📍 Mendekati titik: ${point.name} (${dist.toFixed(0)}m)`, "info");
         }
     });
 }
@@ -466,92 +567,73 @@ function checkProximityToWastePoints(coords) {
 // ===== CHECK GEOFENCE =====
 function checkGeofence(coords) {
     const isInside = isPointInPolygon(coords, MAP_CONFIG.campusBoundary);
-    
     if (!isInside) {
         addLog("⚠ ALERT: Truck keluar dari area Telkom University!", "warning");
     }
 }
 
-// ===== POINT IN POLYGON ALGORITHM =====
+// ===== POINT IN POLYGON (Ray Casting) =====
 function isPointInPolygon(point, polygon) {
-    let x = point[0], y = point[1];
-    let inside = false;
-    
+    let x = point[0], y = point[1], inside = false;
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
         let xi = polygon[i][0], yi = polygon[i][1];
         let xj = polygon[j][0], yj = polygon[j][1];
-        
-        let intersect = ((yi > y) != (yj > y)) && 
+        let intersect = ((yi > y) !== (yj > y)) &&
                         (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
         if (intersect) inside = !inside;
     }
-    
     return inside;
 }
 
 // ===== CHECK ROUTE COMPLIANCE =====
 function checkRouteCompliance(coords) {
+    const el = document.getElementById('route-compliance');
+    if (!el) return;
+
     if (!showingRoute || !currentRoute) {
-        document.getElementById('route-compliance').textContent = "Tidak ada rute aktif";
-        document.getElementById('route-compliance').className = "text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded";
+        el.textContent = "Tidak ada rute aktif";
+        el.className = "text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded";
         return;
     }
-    
+
     const points = getWastePoints();
-    const routeCoords = currentRoute.waypoints.map(wp => {
-        const point = points.find(p => p.id === wp.pointId);
-        return point ? point.location : null;
-    }).filter(c => c !== null);
-    
-    let minDistance = Infinity;
-    
-    for (let routePoint of routeCoords) {
-        const dist = calculateDistance(coords, routePoint);
-        if (dist < minDistance) {
-            minDistance = dist;
-        }
-    }
-    
-    const routeStatus = document.getElementById('route-compliance');
-    
-    if (minDistance > MAP_CONFIG.routeTolerance) {
-        routeStatus.textContent = "Menyimpang dari rute!";
-        routeStatus.className = "text-xs px-2 py-1 bg-red-500 text-white rounded";
-        addLog(`⚠ Truck menyimpang ${minDistance.toFixed(0)}m dari rute`, "warning");
+    const routeCoords = currentRoute.waypoints
+        .map(wp => { const p = points.find(pt => pt.id === wp.pointId); return p ? p.location : null; })
+        .filter(c => c !== null);
+
+    const minDist = Math.min(...routeCoords.map(rc => calculateDistance(coords, rc)));
+
+    if (minDist > MAP_CONFIG.routeTolerance) {
+        el.textContent = `Menyimpang ${minDist.toFixed(0)}m dari rute!`;
+        el.className = "text-xs px-2 py-1 bg-red-500 text-white rounded";
+        addLog(`⚠ Truck menyimpang ${minDist.toFixed(0)}m dari rute`, "warning");
     } else {
-        routeStatus.textContent = "Mengikuti rute ✓";
-        routeStatus.className = "text-xs px-2 py-1 bg-green-light text-white rounded";
+        el.textContent = "Mengikuti rute ✓";
+        el.className = "text-xs px-2 py-1 bg-green-light text-white rounded";
     }
 }
 
-// ===== CALCULATE DISTANCE BETWEEN TWO POINTS (HAVERSINE) =====
+// ===== CALCULATE DISTANCE (Haversine) =====
 function calculateDistance(coord1, coord2) {
     const R = 6371e3;
     const φ1 = coord1[0] * Math.PI / 180;
     const φ2 = coord2[0] * Math.PI / 180;
     const Δφ = (coord2[0] - coord1[0]) * Math.PI / 180;
     const Δλ = (coord2[1] - coord1[1]) * Math.PI / 180;
-    
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    
-    return R * c;
+    const a = Math.sin(Δφ/2)**2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 // ===== CENTER MAP TO CAMPUS =====
 function centerToCampus() {
     map.setView(MAP_CONFIG.center, MAP_CONFIG.zoom);
-    addLog("Peta dipusatkan ke area kampus", "info");
+    addLog("Peta dipusatkan ke area kampus Telkom University", "info");
 }
 
 // ===== CLEAR TRAVELED PATH =====
 function clearTraveledPath() {
     traveledCoords = [];
-    if (traveledPolyline) {
-        traveledPolyline.setLatLngs([]);
-    }
+    if (traveledPolyline) traveledPolyline.setLatLngs([]);
     addLog("Jalur perjalanan dihapus", "info");
 }
 
@@ -568,11 +650,9 @@ function saveWastePoints(points) {
 // ===== RESET ALL WASTE POINTS =====
 function resetWastePoints() {
     if (!confirm('Reset semua status titik pengambilan sampah?')) return;
-    
     const points = getWastePoints();
     points.forEach(p => p.status = 'pending');
     saveWastePoints(points);
     drawWastePoints();
-    
-    addLog("Semua titik pengambilan direset", "success");
+    addLog("Semua titik pengambilan direset ke pending", "success");
 }

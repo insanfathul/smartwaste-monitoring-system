@@ -23,27 +23,31 @@ const MQTT_CONFIG = {
 
 // ===== MAP CONFIGURATION =====
 const MAP_CONFIG = {
-    // Telkom University Center Point (Gedung Rektorat)
-    center: [-6.9744, 107.6316],
+    // Telkom University - Jl. Telekomunikasi No.1, Terusan Buah Batu, Bandung
+    center: [-6.9735, 107.6303],
     zoom: 16,
-    
-    // Telkom University Geofence Boundary
+
+    // Rute default yang otomatis ditampilkan saat peta pertama kali dibuka
+    defaultRoute: 'morning',
+
+    // Telkom University Geofence Boundary (polygon area kampus)
     campusBoundary: [
-        [-6.9691, 107.6276], // Utara Barat (Pintu Utara)
-        [-6.9685, 107.6346], // Utara Timur (Jl. Telekomunikasi)
-        [-6.9798, 107.6360], // Selatan Timur (Dekat Tol)
-        [-6.9809, 107.6291]  // Selatan Barat (Sukapura)
+        [-6.9687, 107.6278],  // Utara Barat - Pintu Masuk Utama
+        [-6.9687, 107.6354],  // Utara Timur - Jl. Telekomunikasi sisi timur
+        [-6.9803, 107.6360],  // Selatan Timur - Dekat Tol Padaleunyi
+        [-6.9807, 107.6276]   // Selatan Barat - Batas Sukapura
     ],
-    
+
     routeTolerance: 50 // Meter tolerance dari rute
 };
 
 // ===== WASTE COLLECTION POINTS (TITIK PENGAMBILAN SAMPAH) =====
+// Koordinat berdasarkan posisi aktual gedung di kampus Telkom University Bandung
 const WASTE_POINTS = [
     {
         id: "WP-01",
-        name: "Gedung Rektorat",
-        location: [-6.9744, 107.6316],
+        name: "Gedung Bangkit (Rektorat)",
+        location: [-6.9733, 107.6306],
         type: "building",
         capacity: 240,
         priority: "high",
@@ -52,8 +56,8 @@ const WASTE_POINTS = [
     },
     {
         id: "WP-02",
-        name: "Gedung Selaru (Fakultas Teknik)",
-        location: [-6.9730, 107.6325],
+        name: "Gedung Selaru (Teknik Informatika)",
+        location: [-6.9718, 107.6332],
         type: "building",
         capacity: 240,
         priority: "high",
@@ -63,7 +67,7 @@ const WASTE_POINTS = [
     {
         id: "WP-03",
         name: "Parkir Utara",
-        location: [-6.9715, 107.6335],
+        location: [-6.9705, 107.6316],
         type: "public",
         capacity: 120,
         priority: "medium",
@@ -72,18 +76,18 @@ const WASTE_POINTS = [
     },
     {
         id: "WP-04",
-        name: "Kantin Utara",
-        location: [-6.9700, 107.6340],
+        name: "Student Center & Kantin Utara",
+        location: [-6.9697, 107.6308],
         type: "canteen",
         capacity: 240,
         priority: "high",
-        schedule: ["07:30", "12:00", "15:00"],
+        schedule: ["07:00", "12:00", "17:00"],
         status: "pending"
     },
     {
         id: "WP-05",
-        name: "GKU Barat (Gedung Kuliah Umum)",
-        location: [-6.9720, 107.6310],
+        name: "Gedung GKU (Kuliah Umum)",
+        location: [-6.9749, 107.6300],
         type: "building",
         capacity: 240,
         priority: "medium",
@@ -92,8 +96,8 @@ const WASTE_POINTS = [
     },
     {
         id: "WP-06",
-        name: "Fakultas Ekonomi & Bisnis",
-        location: [-6.9740, 107.6300],
+        name: "Gedung FEB (Ekonomi & Bisnis)",
+        location: [-6.9757, 107.6291],
         type: "building",
         capacity: 240,
         priority: "medium",
@@ -103,7 +107,7 @@ const WASTE_POINTS = [
     {
         id: "WP-07",
         name: "Sport Center",
-        location: [-6.9760, 107.6315],
+        location: [-6.9763, 107.6318],
         type: "public",
         capacity: 120,
         priority: "low",
@@ -113,7 +117,7 @@ const WASTE_POINTS = [
     {
         id: "WP-08",
         name: "Asrama Putra",
-        location: [-6.9780, 107.6330],
+        location: [-6.9782, 107.6329],
         type: "dormitory",
         capacity: 240,
         priority: "high",
@@ -123,7 +127,7 @@ const WASTE_POINTS = [
     {
         id: "WP-09",
         name: "Asrama Putri",
-        location: [-6.9785, 107.6340],
+        location: [-6.9778, 107.6348],
         type: "dormitory",
         capacity: 240,
         priority: "high",
@@ -132,8 +136,8 @@ const WASTE_POINTS = [
     },
     {
         id: "WP-10",
-        name: "Kantin Selatan",
-        location: [-6.9790, 107.6345],
+        name: "Kantin Selatan (Area GSG)",
+        location: [-6.9767, 107.6337],
         type: "canteen",
         capacity: 240,
         priority: "high",
