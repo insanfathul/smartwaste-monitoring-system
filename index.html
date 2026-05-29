@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Waste Monitoring System - Telkom University</title>
-    
+
     <!-- External CSS & JS Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -19,11 +19,11 @@
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
 
     <!-- Custom Styles -->
-    <link rel="stylesheet" href="css/styles.css?v=1.0.4">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.5">
 </head>
 <body class="flex h-screen overflow-hidden">
-    
-    <!-- LOGIN OVERLAY -->
+
+    <!-- ==================== LOGIN OVERLAY ==================== -->
     <div id="login-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
         <div class="bg-white rounded-2xl soft-shadow p-8 w-full max-w-md">
             <div class="text-center mb-6">
@@ -33,7 +33,7 @@
                 <h2 class="text-2xl font-bold text-dark-text">Smart Waste Monitoring</h2>
                 <p class="text-sm text-gray-500 mt-2">Telkom University</p>
             </div>
-            
+
             <form id="login-form" onsubmit="handleLogin(event)">
                 <div class="space-y-4">
                     <div>
@@ -44,7 +44,7 @@
                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-dark focus:outline-none"
                                placeholder="Masukkan User ID">
                     </div>
-                    
+
                     <div>
                         <label class="block text-sm font-medium text-dark-text mb-2">
                             <i class="fa-solid fa-key mr-2 text-green-dark"></i>Kode Akses
@@ -53,124 +53,124 @@
                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-dark focus:outline-none"
                                placeholder="Masukkan Kode Akses">
                     </div>
-                    
+
                     <div id="login-error" class="hidden p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
                         <i class="fa-solid fa-exclamation-circle mr-2"></i>
                         <span id="login-error-text">User ID atau Kode Akses salah!</span>
                     </div>
-                    
-                    <button type="submit" 
+
+                    <button type="submit"
                             class="w-full bg-green-dark text-white py-3 rounded-lg hover:bg-green-600 transition font-medium">
                         <i class="fa-solid fa-sign-in-alt mr-2"></i>Login
                     </button>
                 </div>
             </form>
-            
+
             <div class="mt-6 pt-6 border-t border-gray-200">
-                <p class="text-xs text-gray-500 text-center">
-                    💡 <b>Hardware & Demo Credentials:</b><br>
-                    User ID: <code class="bg-gray-100 px-2 py-1 rounded">armadatruck_1</code> | 
+                <p class="text-xs text-gray-500 text-center leading-relaxed">
+                    💡 <b>Hardware &amp; Demo Credentials:</b><br>
+                    User ID: <code class="bg-gray-100 px-2 py-1 rounded">armadatruck_1</code> |
                     Kode: <code class="bg-gray-100 px-2 py-1 rounded">truck01</code>
                 </p>
             </div>
         </div>
     </div>
-    
-    <!-- SIDEBAR -->
-    <aside id="sidebar" class="w-64 bg-green-dark text-white flex flex-col justify-between soft-shadow z-10">
-        <div>
-            <!-- Sidebar Header -->
-            <div class="p-6 flex items-center gap-3 border-b border-green-700">
-                <i class="fa-solid fa-leaf text-2xl text-green-300"></i>
-                <div>
-                    <h1 class="font-bold text-lg leading-tight">Smart Waste</h1>
-                    <span class="text-xs text-green-200">Monitoring System</span>
-                </div>
+
+    <!-- ==================== SIDEBAR ==================== -->
+    <aside id="sidebar" class="w-64 bg-green-dark text-white flex flex-col soft-shadow z-10 overflow-y-auto">
+
+        <!-- Sidebar Header -->
+        <div class="p-6 flex items-center gap-3 border-b border-green-700">
+            <i class="fa-solid fa-leaf text-2xl text-green-300"></i>
+            <div>
+                <h1 class="font-bold text-lg leading-tight">Smart Waste</h1>
+                <span class="text-xs text-green-200">Monitoring System</span>
             </div>
-            
-            <!-- User Info Card -->
-            <div class="p-4 mx-4 mt-4 bg-green-600 rounded-xl">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-                        <i class="fa-solid fa-user text-green-dark"></i>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold" id="user-name">User</p>
-                        <p class="text-xs text-green-200" id="user-truck">Truck ID: -</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Navigation Menu -->
-            <nav class="p-4 space-y-2 mt-4">
-                <a href="#dashboard" onclick="switchView('dashboard', event)" 
-                   class="nav-link flex items-center gap-4 px-4 py-3 bg-green-600 rounded-xl transition duration-200">
-                    <i class="fa-solid fa-map-location-dot w-5"></i>
-                    <span class="text-sm font-medium">Live Tracking</span>
-                </a>
-                <a href="#analytics" onclick="switchView('analytics', event)" 
-                   class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-green-600 rounded-xl transition duration-200">
-                    <i class="fa-solid fa-chart-pie w-5"></i>
-                    <span class="text-sm font-medium">Analitik</span>
-                </a>
-                <a href="#history" onclick="switchView('history', event)" 
-                   class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-green-600 rounded-xl transition duration-200">
-                    <i class="fa-solid fa-history w-5"></i>
-                    <span class="text-sm font-medium">Riwayat</span>
-                </a>
-                <a href="#" onclick="handleLogout()" 
-                   class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-red-600 rounded-xl transition duration-200">
-                    <i class="fa-solid fa-sign-out-alt w-5"></i>
-                    <span class="text-sm font-medium">Logout</span>
-                </a>
-            </nav>
         </div>
-        
-        <!-- Tambahkan setelah Navigation Menu di sidebar -->
 
-<!-- Route Management Panel -->
-<div class="p-4 mx-4 mt-4 bg-green-700 rounded-xl">
-    <h3 class="text-xs font-semibold text-green-200 mb-3 uppercase">
-        <i class="fa-solid fa-route mr-1"></i> Rute Aktif
-    </h3>
-    <div id="active-route-info" class="text-xs text-white">
-        <p class="mb-2">Belum ada rute dipilih</p>
-        <button onclick="showRouteSelectionModal()" 
-                class="w-full bg-white text-green-dark py-2 rounded-lg hover:bg-gray-100 transition text-xs font-medium">
-            <i class="fa-solid fa-map mr-1"></i> Pilih Rute
-        </button>
-    </div>
-</div>
+        <!-- User Info Card -->
+        <div class="p-4 mx-4 mt-4 bg-green-600 rounded-xl">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-user text-green-dark"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold" id="user-name">User</p>
+                    <p class="text-xs text-green-200" id="user-truck">Truck ID: -</p>
+                </div>
+            </div>
+        </div>
 
-    <!-- Waste Points Stats -->
-    <div class="p-4 mx-4 mt-2 bg-orange-custom rounded-xl">
-        <h3 class="text-xs font-semibold text-orange-100 mb-3 uppercase">
-            <i class="fa-solid fa-trash mr-1"></i> Status Pengambilan
-        </h3>
-        <div class="text-xs text-white space-y-2">
-            <div class="flex justify-between">
-                <span>Total Titik:</span>
-                <span id="total-points" class="font-semibold">10</span>
-            </div>
-            <div class="flex justify-between">
-                <span>Sudah Diambil:</span>
-                <span id="collected-points" class="font-semibold">0</span>
-            </div>
-            <div class="flex justify-between">
-                <span>Belum Diambil:</span>
-                <span id="pending-points" class="font-semibold">10</span>
-            </div>
-            <div class="pt-2 border-t border-orange-200">
-                <button onclick="resetWastePoints()" 
-                        class="w-full bg-white text-orange-custom py-1.5 rounded hover:bg-orange-50 transition text-xs font-medium">
-                    <i class="fa-solid fa-refresh mr-1"></i> Reset Status
+        <!-- Navigation Menu -->
+        <nav class="p-4 space-y-2 mt-2">
+            <a href="#dashboard" onclick="switchView('dashboard', event)"
+               class="nav-link flex items-center gap-4 px-4 py-3 bg-green-600 rounded-xl transition duration-200">
+                <i class="fa-solid fa-map-location-dot w-5"></i>
+                <span class="text-sm font-medium">Live Tracking</span>
+            </a>
+            <a href="#analytics" onclick="switchView('analytics', event)"
+               class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-green-600 rounded-xl transition duration-200">
+                <i class="fa-solid fa-chart-pie w-5"></i>
+                <span class="text-sm font-medium">Analitik</span>
+            </a>
+            <a href="#history" onclick="switchView('history', event)"
+               class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-green-600 rounded-xl transition duration-200">
+                <i class="fa-solid fa-history w-5"></i>
+                <span class="text-sm font-medium">Riwayat</span>
+            </a>
+            <a href="#" onclick="handleLogout()"
+               class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-red-600 rounded-xl transition duration-200">
+                <i class="fa-solid fa-sign-out-alt w-5"></i>
+                <span class="text-sm font-medium">Logout</span>
+            </a>
+        </nav>
+
+        <!-- Route Management Panel -->
+        <div class="p-4 mx-4 mt-2 bg-green-700 rounded-xl">
+            <h3 class="text-xs font-semibold text-green-200 mb-3 uppercase tracking-wider">
+                <i class="fa-solid fa-route mr-1"></i> Rute Aktif
+            </h3>
+            <div id="active-route-info" class="text-xs text-white">
+                <p class="mb-2">Belum ada rute dipilih</p>
+                <button onclick="showRouteSelectionModal()"
+                        class="w-full bg-white text-green-dark py-2 rounded-lg hover:bg-gray-100 transition text-xs font-medium">
+                    <i class="fa-solid fa-map mr-1"></i> Pilih Rute
                 </button>
             </div>
         </div>
-    </div>
-        
+
+        <!-- Waste Points Stats -->
+        <div class="p-4 mx-4 mt-3 bg-orange-custom rounded-xl">
+            <h3 class="text-xs font-semibold text-orange-100 mb-3 uppercase tracking-wider">
+                <i class="fa-solid fa-trash mr-1"></i> Status Pengambilan
+            </h3>
+            <div class="text-xs text-white space-y-2">
+                <div class="flex justify-between">
+                    <span>Total Titik:</span>
+                    <span id="total-points" class="font-semibold">10</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Sudah Diambil:</span>
+                    <span id="collected-points" class="font-semibold">0</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Belum Diambil:</span>
+                    <span id="pending-points" class="font-semibold">10</span>
+                </div>
+                <div class="pt-2 border-t border-orange-200">
+                    <button onclick="resetWastePoints()"
+                            class="w-full bg-white text-orange-custom py-1.5 rounded hover:bg-orange-50 transition text-xs font-medium">
+                        <i class="fa-solid fa-refresh mr-1"></i> Reset Status
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Spacer agar footer terdorong ke bawah -->
+        <div class="flex-1"></div>
+
         <!-- MQTT Status Footer -->
-        <div class="p-4 border-t border-green-700">
+        <div class="p-4 mt-3 border-t border-green-700">
             <div class="text-center mb-2">
                 <span class="text-xs text-green-200">MQTT Server:</span>
                 <span id="mqtt-status" class="block text-xs px-2 py-1 mt-1 rounded bg-orange-custom text-white font-semibold">
@@ -179,20 +179,20 @@
             </div>
             <div class="text-center text-xs text-green-200">
                 <i class="fa-solid fa-server mr-1"></i>
-                <span>EMQX Broker</span>
+                <span>Public MQTT Broker</span>
             </div>
         </div>
     </aside>
 
-    <!-- MAIN CONTENT -->
+    <!-- ==================== MAIN CONTENT ==================== -->
     <main class="flex-1 flex flex-col overflow-y-auto bg-soft-bg">
-        
+
         <!-- TOP HEADER -->
-        <header class="bg-white h-16 flex items-center justify-between px-8 soft-shadow z-50">
-            <h2 class="text-xl font-semibold text-dark-text">
+        <header class="bg-white h-16 flex items-center justify-between px-8 soft-shadow z-40 flex-shrink-0">
+            <h2 class="text-lg md:text-xl font-semibold text-dark-text truncate">
                 Smart Waste Monitoring System - Telkom University
             </h2>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-4 flex-shrink-0">
                 <div class="text-right">
                     <p class="text-sm font-medium text-dark-text">Monitoring Center</p>
                     <p class="text-xs text-gray-400" id="current-time">--:--:--</p>
@@ -204,11 +204,11 @@
         </header>
 
         <!-- DASHBOARD CONTENT -->
-        <div id="dashboard-view" class="p-8 space-y-6 flex-1">
+        <div id="dashboard-view" class="p-6 md:p-8 space-y-6 flex-1">
 
             <!-- ROW 1: STATUS CARDS -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-                
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
+
                 <!-- Card: Kapasitas -->
                 <div class="bg-white p-5 rounded-2xl soft-shadow border-l-4 border-orange-custom flex items-center justify-between">
                     <div>
@@ -218,20 +218,20 @@
                             Normal
                         </span>
                     </div>
-                    <div class="w-11 h-11 bg-orange-100 rounded-xl flex items-center justify-center text-orange-custom text-xl">
+                    <div class="w-11 h-11 bg-orange-100 rounded-xl flex items-center justify-center text-orange-custom text-xl flex-shrink-0">
                         <i class="fa-solid fa-dumpster"></i>
                     </div>
                 </div>
 
                 <!-- Card: GPS -->
                 <div class="bg-white p-5 rounded-2xl soft-shadow border-l-4 border-green-light flex items-center justify-between">
-                    <div>
+                    <div class="min-w-0">
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Koordinat GPS</p>
-                        <h3 id="val-gps" class="text-xs font-bold text-dark-text mt-2 truncate max-w-[160px]">
-                            -6.9744, 107.6316
+                        <h3 id="val-gps" class="text-xs font-bold text-dark-text mt-2 truncate">
+                            Menunggu data GPS...
                         </h3>
                     </div>
-                    <div class="w-11 h-11 bg-green-100 rounded-xl flex items-center justify-center text-green-light text-xl">
+                    <div class="w-11 h-11 bg-green-100 rounded-xl flex items-center justify-center text-green-light text-xl flex-shrink-0">
                         <i class="fa-solid fa-location-dot"></i>
                     </div>
                 </div>
@@ -245,7 +245,7 @@
                             <i class="fa-solid fa-circle text-gray-400 mr-1"></i>Tidak Beroperasi
                         </span>
                     </div>
-                    <div class="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center text-blue-500 text-xl">
+                    <div class="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center text-blue-500 text-xl flex-shrink-0">
                         <i class="fa-solid fa-truck-moving"></i>
                     </div>
                 </div>
@@ -256,7 +256,7 @@
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Kemiringan (IMU)</p>
                         <h3 id="val-imu" class="text-2xl font-bold text-dark-text mt-1">0°</h3>
                     </div>
-                    <div class="w-11 h-11 bg-green-50 rounded-xl flex items-center justify-center text-green-dark text-xl">
+                    <div class="w-11 h-11 bg-green-50 rounded-xl flex items-center justify-center text-green-dark text-xl flex-shrink-0">
                         <i class="fa-solid fa-arrows-spin"></i>
                     </div>
                 </div>
@@ -267,7 +267,7 @@
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Sinyal GSM</p>
                         <h3 id="val-gsm" class="text-2xl font-bold text-dark-text mt-1">0 dBm</h3>
                     </div>
-                    <div class="w-11 h-11 bg-purple-100 rounded-xl flex items-center justify-center text-purple-500 text-xl">
+                    <div class="w-11 h-11 bg-purple-100 rounded-xl flex items-center justify-center text-purple-500 text-xl flex-shrink-0">
                         <i class="fa-solid fa-signal"></i>
                     </div>
                 </div>
@@ -281,7 +281,7 @@
                             Connecting
                         </span>
                     </div>
-                    <div id="mqtt-icon-container" class="w-11 h-11 bg-orange-100 rounded-xl flex items-center justify-center text-orange-custom text-xl">
+                    <div id="mqtt-icon-container" class="w-11 h-11 bg-orange-100 rounded-xl flex items-center justify-center text-orange-custom text-xl flex-shrink-0">
                         <i class="fa-solid fa-wifi animate-pulse"></i>
                     </div>
                 </div>
@@ -290,21 +290,21 @@
 
             <!-- ROW 2: MAP & NOTIFICATIONS -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 <!-- Live Map -->
                 <div class="lg:col-span-2 bg-white p-6 rounded-2xl soft-shadow flex flex-col h-[500px]">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="font-semibold text-dark-text">
+                    <div class="flex justify-between items-center mb-3 gap-2">
+                        <h3 class="font-semibold text-dark-text truncate">
                             <i class="fa-solid fa-map text-green-dark mr-2"></i>
-                            Live Tracking - Telkom University Area
+                            Live Tracking - Telkom University
                         </h3>
-                        <div class="flex gap-2">
-                            <button onclick="centerToCampus()" 
-                                    class="text-xs px-3 py-1 bg-green-dark text-white rounded-lg hover:bg-green-600 transition">
+                        <div class="flex gap-2 flex-shrink-0">
+                            <button onclick="centerToCampus()"
+                                    class="text-xs px-3 py-1.5 bg-green-dark text-white rounded-lg hover:bg-green-600 transition">
                                 <i class="fa-solid fa-building-columns mr-1"></i> Fokus Kampus
                             </button>
-                            <button onclick="toggleRoute()" 
-                                    class="text-xs px-3 py-1 bg-orange-custom text-white rounded-lg hover:bg-orange-600 transition">
+                            <button onclick="toggleRoute()"
+                                    class="text-xs px-3 py-1.5 bg-orange-custom text-white rounded-lg hover:bg-orange-600 transition">
                                 <i class="fa-solid fa-route mr-1"></i> <span id="route-btn-text">Tampilkan Rute</span>
                             </button>
                         </div>
@@ -312,12 +312,12 @@
                     <div class="flex-1 border border-gray-200 rounded-xl overflow-hidden">
                         <div id="map"></div>
                     </div>
-                    
+
                     <!-- Route Compliance Indicator -->
-                    <div class="mt-3 p-3 rounded-lg" id="route-status">
-                        <div class="flex items-center gap-2">
+                    <div class="mt-3 p-3 rounded-lg bg-gray-50" id="route-status">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <i class="fa-solid fa-route text-gray-400"></i>
-                            <span class="text-xs font-medium text-gray-600">Status Rute: </span>
+                            <span class="text-xs font-medium text-gray-600">Status Rute:</span>
                             <span id="route-compliance" class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded">
                                 Menunggu data GPS
                             </span>
@@ -332,7 +332,7 @@
                             <i class="fa-solid fa-bell text-orange-custom mr-2"></i>
                             Log Aktivitas Real-time
                         </h3>
-                        <button onclick="clearLogs()" class="text-xs text-gray-500 hover:text-red-500">
+                        <button onclick="clearLogs()" class="text-xs text-gray-500 hover:text-red-500 transition">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </div>
@@ -347,7 +347,7 @@
 
             <!-- ROW 3: CHARTS -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
+
                 <!-- Chart: Kapasitas -->
                 <div class="bg-white p-6 rounded-2xl soft-shadow">
                     <h3 class="font-semibold text-dark-text mb-3">
@@ -390,14 +390,14 @@
     </main>
 
     <!-- External JavaScript Files -->
-    <script src="js/config.js?v=1.0.4"></script>
-    <script src="js/auth.js?v=1.0.4"></script>
-    <script src="js/mqtt.js?v=1.0.4"></script>
-    <script src="js/map.js?v=1.0.4"></script>
-    <script src="js/ui.js?v=1.0.4"></script>
-    <script src="js/charts.js?v=1.0.4"></script>
-    <script src="js/route-builder.js?v=1.0.4"></script>
-    <script src="js/main.js?v=1.0.4"></script>
+    <script src="js/config.js?v=1.0.5"></script>
+    <script src="js/auth.js?v=1.0.5"></script>
+    <script src="js/mqtt.js?v=1.0.5"></script>
+    <script src="js/map.js?v=1.0.5"></script>
+    <script src="js/ui.js?v=1.0.5"></script>
+    <script src="js/charts.js?v=1.0.5"></script>
+    <script src="js/route-builder.js?v=1.0.5"></script>
+    <script src="js/main.js?v=1.0.5"></script>
 
 </body>
 </html>

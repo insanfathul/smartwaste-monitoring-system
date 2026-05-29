@@ -7,14 +7,14 @@
 function updateCapacityDisplay(percent) {
     const valEl = document.getElementById('val-capacity');
     const statusEl = document.getElementById('capacity-status');
-    
+
     if (valEl) {
         valEl.textContent = percent.toFixed(1) + '%';
     }
-    
+
     if (statusEl) {
         let config = CAPACITY_CONFIG.low;
-        
+
         if (percent >= CAPACITY_CONFIG.critical.min) {
             config = CAPACITY_CONFIG.critical;
         } else if (percent >= CAPACITY_CONFIG.high.min) {
@@ -22,11 +22,10 @@ function updateCapacityDisplay(percent) {
         } else if (percent >= CAPACITY_CONFIG.medium.min) {
             config = CAPACITY_CONFIG.medium;
         }
-        
+
         statusEl.textContent = config.label;
         statusEl.className = `text-xs px-2 py-1 rounded text-white mt-2 inline-block ${config.class}`;
-        
-        // Alert if critical
+
         if (percent >= 90) {
             addLog(`🚨 KAPASITAS KRITIS (${percent.toFixed(1)}%) - Segera kosongkan!`, "error");
         }
@@ -45,7 +44,7 @@ function updateGPSDisplay(lat, lng) {
 function updateIMUDisplay(angle) {
     const imuEl = document.getElementById('val-imu');
     if (imuEl) {
-        imuEl.textContent = angle.toFixed(1) + '°';
+        imuEl.textContent = Number(angle).toFixed(1) + '°';
     }
 }
 
@@ -61,7 +60,7 @@ function updateGSMDisplay(signal) {
 function updateOperationStatus(isMoving) {
     const statusEl = document.getElementById('val-operation');
     const indicatorEl = document.getElementById('operation-indicator');
-    
+
     if (statusEl && indicatorEl) {
         if (isMoving) {
             statusEl.textContent = "Beroperasi";
@@ -77,14 +76,14 @@ function updateOperationStatus(isMoving) {
 function addLog(text, type = "info") {
     const container = document.getElementById('notification-container');
     if (!container) return;
-    
+
     const div = document.createElement('div');
     const timestamp = new Date().toLocaleTimeString('id-ID');
-    
+
     let borderColor = "border-gray-300";
     let icon = "fa-info-circle";
-    
-    switch(type) {
+
+    switch (type) {
         case "success":
             borderColor = "border-green-dark";
             icon = "fa-check-circle";
@@ -102,7 +101,7 @@ function addLog(text, type = "info") {
             borderColor = "border-blue-500";
             icon = "fa-info-circle";
     }
-    
+
     div.className = `p-3 bg-gray-50 border-l-2 ${borderColor} rounded-r-xl`;
     div.innerHTML = `
         <div class="flex gap-2">
@@ -113,10 +112,10 @@ function addLog(text, type = "info") {
             </div>
         </div>
     `;
-    
+
     container.insertBefore(div, container.firstChild);
-    
-    // Limit to 50 logs
+
+    // Batasi 50 log
     while (container.children.length > 50) {
         container.removeChild(container.lastChild);
     }
@@ -139,36 +138,38 @@ function updateCurrentTime() {
         timeEl.textContent = now.toLocaleTimeString('id-ID');
     }
 }
-
-// Update time every second
 setInterval(updateCurrentTime, 1000);
 
 // ===== VIEW SWITCHING =====
-function switchView(viewName) {
+// FIX: event diterima sebagai parameter (HTML memanggil switchView('dashboard', event)),
+// tidak lagi mengandalkan variabel global `event` yang rapuh.
+function switchView(viewName, event) {
     console.log("Switching to view:", viewName);
-    
-    // Update active nav
+
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active', 'bg-green-600');
     });
-    
+
     if (event && event.target) {
-        event.target.closest('.nav-link').classList.add('active', 'bg-green-600');
+        const link = event.target.closest('.nav-link');
+        if (link) link.classList.add('active', 'bg-green-600');
     }
 }
-// Tambahkan di akhir file ui.js
 
 // ===== UPDATE WASTE POINTS STATS =====
 function updateWastePointsStats() {
+    if (typeof getWastePoints !== 'function') return;
     const points = getWastePoints();
     const total = points.length;
     const collected = points.filter(p => p.status === 'collected').length;
     const pending = points.filter(p => p.status === 'pending').length;
-    
-    document.getElementById('total-points').textContent = total;
-    document.getElementById('collected-points').textContent = collected;
-    document.getElementById('pending-points').textContent = pending;
-}
 
-// Panggil setiap kali ada update
+    const totalEl = document.getElementById('total-points');
+    const collectedEl = document.getElementById('collected-points');
+    const pendingEl = document.getElementById('pending-points');
+
+    if (totalEl) totalEl.textContent = total;
+    if (collectedEl) collectedEl.textContent = collected;
+    if (pendingEl) pendingEl.textContent = pending;
+}
 setInterval(updateWastePointsStats, 2000);

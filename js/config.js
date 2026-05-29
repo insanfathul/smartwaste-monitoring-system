@@ -4,49 +4,48 @@
    =================================== */
 
 /* ============================================================
-   ★★★ BROKER SELECTION — EDIT ONLY THIS BLOCK ★★★
+   ★★★ BROKER SELECTION — JALUR A (PUBLIC BROKER) ★★★
 
-   PATH A (DEFAULT, works with SIM800L):  public broker, no TLS, no auth.
-   PATH B (your EMQX Cloud deployment):   needs a NON-TLS 1883 listener
-          for the ESP32, and WSS 8084 for the web. Only switch if your
-          deployment exposes a plain 1883 listener.
+   Web  (file ini) : broker.emqx.io via WSS port 8084
+                     (Vercel = HTTPS, jadi WAJIB wss; ws:// diblokir browser)
+   ESP32 (main.cpp): broker.emqx.io via TCP  port 1883 (SIM800L, no TLS)
 
-   IMPORTANT: the web (this file) and the ESP32 (main.cpp) MUST point at
-   the SAME broker host, or they will never see each other's messages.
+   Broker publik mendukung 1883 (TCP) dan 8084 (WSS) secara bersamaan,
+   jadi ESP32 dan web TETAP saling melihat pesan selama TOPIC-nya sama.
+
+   ⚠ broker.emqx.io bersifat publik & terbuka. Cocok untuk demo/skripsi.
+     Untuk produksi, gunakan EMQX Cloud (Jalur B) dengan auth.
    ============================================================ */
-
-// ---- EMQX CLOUD DEPLOYMENT (active) — WSS 8084, TLS ----
-// Browser handles TLS + SNI automatically, so the web side is reliable.
 const MQTT_CONFIG = {
-    host: "n6a96139.ala.asia-southeast1.emqxsl.com",
-    port: 8084,        // 8084 = WSS (secure WebSocket) for EMQX Cloud TLS
+    host: "broker.emqx.io",
+    port: 8084,        // 8084 = WSS (secure WebSocket). Wajib utk web HTTPS/Vercel.
     path: "/mqtt",
     clientId: "swms_web_" + Math.random().toString(16).substr(2, 8),
-    username: "smartwaste_monitoring",
-    password: "gAdx26djJttJeih",
-    topic: "smartwaste-telkomu-n6a96139/#",            // subscribe to all sub-topics
+    username: "",      // broker publik: tanpa auth
+    password: "",
+    topic: "smartwaste-telkomu-n6a96139/#",            // subscribe semua sub-topic
     topicPublish: "smartwaste-telkomu-n6a96139/truck/data",
     qos: 1,
-    useSSL: true,      // true for 8084 (wss)
+    useSSL: true,      // true untuk 8084 (wss)
     keepAlive: 60,
     cleanSession: true
 };
 
-/* ---- FALLBACK: PUBLIC BROKER (commented out) ----
-   If you ever revert to the public broker, swap the block above for this
-   AND change main.cpp to match (broker.emqx.io / 1883 / no auth).
+/* ---- FALLBACK: EMQX CLOUD (Jalur B, commented out) ----
+   Jika nanti pindah ke EMQX Cloud, swap blok di atas dengan ini DAN
+   ubah main.cpp agar host = deployment Anda + listener 1883 non-TLS aktif.
 
 const MQTT_CONFIG = {
-    host: "broker.emqx.io",
-    port: 8083,        // ws (non-TLS)
+    host: "n6a96139.ala.asia-southeast1.emqxsl.com",
+    port: 8084,
     path: "/mqtt",
     clientId: "swms_web_" + Math.random().toString(16).substr(2, 8),
-    username: "",
-    password: "",
+    username: "smartwaste_monitoring",
+    password: "gAdx26djJttJeih",
     topic: "smartwaste-telkomu-n6a96139/#",
     topicPublish: "smartwaste-telkomu-n6a96139/truck/data",
     qos: 1,
-    useSSL: false,
+    useSSL: true,
     keepAlive: 60,
     cleanSession: true
 };

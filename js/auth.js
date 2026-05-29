@@ -4,33 +4,29 @@
    =================================== */
 
 // ===== PREDEFINED USERS DATABASE =====
+// CATATAN: truckId di sini HARUS cocok dengan TRUCK_ID di main.cpp
+// agar filter data MQTT tidak membuang paket GPS.
+// ESP32 saat ini mengirim truck_id = "TRUCK_01".
 const USERS_DATABASE = [
     {
         userId: "armadatruck_1",
         code: "truck01",
         name: "Armada Truck 1",
-        truckId: "TRUCK_01",
+        truckId: "TRUCK_01",   // ← cocok dengan ESP32 (main.cpp)
         role: "driver"
     },
     {
         userId: "admin",
         code: "1234",
         name: "Administrator",
-        truckId: "TS-01",
+        truckId: "ALL",        // admin lihat semua truk
         role: "admin"
     },
     {
         userId: "driver01",
         code: "5678",
         name: "Budi Santoso",
-        truckId: "TS-01",
-        role: "driver"
-    },
-    {
-        userId: "driver02",
-        code: "9012",
-        name: "Andi Wijaya",
-        truckId: "TS-02",
+        truckId: "TRUCK_01",
         role: "driver"
     },
     {
@@ -45,25 +41,21 @@ const USERS_DATABASE = [
 // ===== HANDLE LOGIN FORM SUBMIT =====
 function handleLogin(event) {
     event.preventDefault();
-    
+
     const userId = document.getElementById('login-userid').value.trim();
     const code = document.getElementById('login-code').value.trim();
-    
-    // Validate credentials
+
     const user = USERS_DATABASE.find(u => u.userId === userId && u.code === code);
-    
+
     if (user) {
-        // Login successful
         loginSuccess(user);
     } else {
-        // Login failed
         loginFailed();
     }
 }
 
 // ===== LOGIN SUCCESS =====
 function loginSuccess(user) {
-    // Save user session
     const session = {
         userId: user.userId,
         name: user.name,
@@ -71,13 +63,12 @@ function loginSuccess(user) {
         role: user.role,
         loginTime: new Date().toISOString()
     };
-    
+
     localStorage.setItem(STORAGE_KEYS.session, JSON.stringify(session));
-    
-    // Hide login overlay with animation
+
     const overlay = document.getElementById('login-overlay');
     overlay.style.animation = 'fadeOut 0.3s ease-out';
-    
+
     setTimeout(() => {
         overlay.classList.add('hidden');
         overlay.style.animation = '';
@@ -85,34 +76,28 @@ function loginSuccess(user) {
             initApp();
         }
     }, 300);
-    
-    // Update user info in sidebar
+
     updateUserInfo(user);
-    
-    // Add success log
+
     addLog(`✓ Login berhasil! Selamat datang, ${user.name}`, "success");
-    
-    // Subscribe to MQTT topic (menggunakan topic utama dari hardware)
-    addLog(`Berlangganan topic hardware: ${MQTT_CONFIG.topic}`, "info");
+    addLog(`Memantau truck: ${user.truckId}`, "info");
 }
 
 // ===== LOGIN FAILED =====
 function loginFailed() {
     const errorDiv = document.getElementById('login-error');
     const errorText = document.getElementById('login-error-text');
-    
+
     errorDiv.classList.remove('hidden');
     errorText.textContent = 'User ID atau Kode Akses salah!';
-    
-    // Shake animation
+
     const form = document.getElementById('login-form');
     form.style.animation = 'shake 0.5s';
-    
+
     setTimeout(() => {
         form.style.animation = '';
     }, 500);
-    
-    // Clear password field
+
     document.getElementById('login-code').value = '';
     document.getElementById('login-code').focus();
 }
@@ -126,25 +111,16 @@ function updateUserInfo(user) {
 // ===== CHECK IF USER IS LOGGED IN =====
 function checkAuth() {
     const session = localStorage.getItem(STORAGE_KEYS.session);
-    
+
     if (!session) {
-        // Not logged in, show login overlay
         document.getElementById('login-overlay').classList.remove('hidden');
         return false;
     }
-    
+
     try {
         const user = JSON.parse(session);
-        
-        // Update user info
         updateUserInfo(user);
-        
-        // Hide login overlay
         document.getElementById('login-overlay').classList.add('hidden');
-        
-        // Menggunakan topic utama dari hardware
-        // MQTT_CONFIG.topic tetap menggunakan 'truck/monitoring/data' agar cocok dengan hardware
-        
         return true;
     } catch (error) {
         console.error("Session parse error:", error);
@@ -158,26 +134,21 @@ function handleLogout() {
     if (!confirm('Apakah Anda yakin ingin logout?')) {
         return;
     }
-    
-    // Clear session
+
     localStorage.removeItem(STORAGE_KEYS.session);
-    
-    // Disconnect MQTT
-    if (mqttClient && isConnected) {
-        mqttClient.disconnect();
+
+    // FIX: mqtt.js memakai mqtt.js library → method-nya .end(), bukan .disconnect()
+    if (typeof mqttClient !== 'undefined' && mqttClient) {
+        try { mqttClient.end(true); } catch (e) { console.warn(e); }
     }
-    
-    // Show login overlay
+
     document.getElementById('login-overlay').classList.remove('hidden');
-    
-    // Reset form
+
     document.getElementById('login-userid').value = '';
     document.getElementById('login-code').value = '';
     document.getElementById('login-error').classList.add('hidden');
-    
-    // Clear logs
+
     clearLogs();
-    
     addLog("Logout berhasil", "info");
 }
 
@@ -185,7 +156,7 @@ function handleLogout() {
 function getCurrentUser() {
     const session = localStorage.getItem(STORAGE_KEYS.session);
     if (!session) return null;
-    
+
     try {
         return JSON.parse(session);
     } catch (error) {
@@ -193,25 +164,18 @@ function getCurrentUser() {
     }
 }
 
-// ===== SHAKE ANIMATION CSS (ADD TO STYLES) =====
+// ===== SHAKE & FADE ANIMATION (inject ke <head>) =====
 const shakeKeyframes = `
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
     10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
     20%, 40%, 60%, 80% { transform: translateX(10px); }
 }
-
 @keyframes fadeOut {
-    from {
-        opacity: 1;
-    }
-    to {
-        opacity: 0;
-    }
+    from { opacity: 1; }
+    to { opacity: 0; }
 }
 `;
-
-// Inject shake animation
 const style = document.createElement('style');
 style.textContent = shakeKeyframes;
 document.head.appendChild(style);
