@@ -108,7 +108,12 @@ function onMQTTMessageArrived(topic, messageBuffer) {
 }
 
 // ===== PROCESS INCOMING SENSOR DATA =====
-function processIncomingData(data) {
+function processIncomingData(rawData) {
+    // Normalisasi semua key ke lowercase agar cocok dengan hardware apapun
+    // (hardware bisa kirim "Lat", "lat", "LAT" — semua jadi "lat")
+    const data = {};
+    Object.keys(rawData).forEach(k => { data[k.toLowerCase()] = rawData[k]; });
+
     console.log("[MQTT] Processing data:", data);
 
     // Filter berdasarkan truck ID user yang login.

@@ -735,13 +735,26 @@ function clearTraveledPath() {
 }
 
 // ===== STORAGE FUNCTIONS =====
+// Koordinat & metadata selalu dari WASTE_POINTS (konstanta); hanya status/collectedAt
+// yang diambil dari localStorage. Ini mencegah rute gagal saat localStorage stale.
 function getWastePoints() {
     const saved = localStorage.getItem(STORAGE_KEYS.wastePoints);
-    return saved ? JSON.parse(saved) : WASTE_POINTS;
+    if (!saved) return WASTE_POINTS.map(wp => ({ ...wp }));
+    try {
+        const savedArr = JSON.parse(saved);
+        return WASTE_POINTS.map(wp => {
+            const sp = savedArr.find(s => s.id === wp.id);
+            return sp ? { ...wp, status: sp.status, collectedAt: sp.collectedAt } : { ...wp };
+        });
+    } catch(e) {
+        return WASTE_POINTS.map(wp => ({ ...wp }));
+    }
 }
 
 function saveWastePoints(points) {
-    localStorage.setItem(STORAGE_KEYS.wastePoints, JSON.stringify(points));
+    // Simpan hanya status & collectedAt agar localStorage tetap kecil
+    const slim = points.map(p => ({ id: p.id, status: p.status, collectedAt: p.collectedAt || null }));
+    localStorage.setItem(STORAGE_KEYS.wastePoints, JSON.stringify(slim));
 }
 
 // ===== RESET ALL WASTE POINTS =====
