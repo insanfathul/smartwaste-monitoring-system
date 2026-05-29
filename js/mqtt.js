@@ -81,14 +81,15 @@ function onMQTTFailure(error) {
 
 // ===== ON MQTT CONNECTION LOST =====
 function onMQTTConnectionLost() {
-    if (!isConnected) return;
+    const wasConnected = isConnected;
     isConnected = false;
 
-    console.log("[MQTT] Connection lost");
+    console.log("[MQTT] Connection closed, wasConnected:", wasConnected);
     updateMQTTStatus("Disconnected", "bg-red-500");
     addLog("Koneksi MQTT terputus, mencoba reconnect...", "error");
 
-    setTimeout(initMQTT, 3000);
+    // Selalu retry: baik putus di tengah jalan maupun gagal koneksi awal
+    setTimeout(initMQTT, wasConnected ? 3000 : 8000);
 }
 
 // ===== ON MESSAGE RECEIVED =====
