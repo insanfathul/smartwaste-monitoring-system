@@ -721,6 +721,28 @@ function centerToCampus() {
     addLog("Peta dipusatkan ke area kampus Telkom University", "info");
 }
 
+// ===== REFRESH POSISI KENDARAAN =====
+// Memusatkan peta ke posisi truk terakhir & memaksa peta redraw.
+// Berguna jika marker tampak "macet" atau peta perlu disinkronkan ulang.
+function refreshTruckPosition() {
+    if (!map) return;
+
+    // Paksa Leaflet menghitung ulang ukuran & ubin (fix marker tak ter-render)
+    map.invalidateSize();
+
+    if (truckMarker && lastTruckCoord) {
+        const c = lastTruckCoord;
+        truckMarker.setLatLng(c);                 // pastikan marker di koordinat terakhir
+        map.setView(c, Math.max(map.getZoom(), 17), { animate: true });
+        truckMarker.openPopup();
+        addLog(`📍 Posisi kendaraan disegarkan: ${c[0].toFixed(5)}, ${c[1].toFixed(5)}`, "success");
+    } else {
+        // Belum ada data GPS valid yang pernah masuk
+        map.setView(MAP_CONFIG.center, MAP_CONFIG.zoom);
+        addLog("Belum ada data GPS valid. Pastikan broker web & ESP32 sama, lalu tunggu data.", "warning");
+    }
+}
+
 // ===== CLEAR TRAVELED PATH =====
 function clearTraveledPath() {
     traveledCoords = [];
