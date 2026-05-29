@@ -25,20 +25,23 @@ function initMQTT() {
             onFailure: onMQTTFailure,
             keepAliveInterval: MQTT_CONFIG.keepAlive,
             cleanSession: MQTT_CONFIG.cleanSession,
-            userName: MQTT_CONFIG.username,
-            password: MQTT_CONFIG.password,
-            reconnect: false,   // Matikan auto-reconnect Paho, gunakan manual retry
-            timeout: 15         // Naikkan timeout jadi 15 detik untuk HiveMQ Cloud
+            reconnect: false,
+            timeout: 15
         };
+
+        if (MQTT_CONFIG.username) {
+            connectOptions.userName = MQTT_CONFIG.username;
+            connectOptions.password = MQTT_CONFIG.password;
+        }
 
         mqttClient.connect(connectOptions);
 
         updateMQTTStatus("Connecting", "bg-orange-custom");
-        addLog("Menghubungkan ke HiveMQ Cloud...", "info");
+        addLog("Menghubungkan ke EMQX Broker...", "info");
 
+        const protocol = MQTT_CONFIG.useSSL ? "wss" : "ws";
         console.log("[MQTT] Connecting to:", {
-            url: `wss://${MQTT_CONFIG.host}:${MQTT_CONFIG.port}${MQTT_CONFIG.path}`,
-            username: MQTT_CONFIG.username,
+            url: `${protocol}://${MQTT_CONFIG.host}:${MQTT_CONFIG.port}${MQTT_CONFIG.path}`,
             useSSL: MQTT_CONFIG.useSSL,
             clientId: MQTT_CONFIG.clientId
         });

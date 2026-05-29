@@ -4,18 +4,19 @@
    =================================== */
 
 // ===== MQTT CONFIGURATION =====
-// Broker: HiveMQ Cloud (Free #1) - Telkom University
-// Web  → port 8884 WSS  |  ESP32+SIM800L → port 8883 TLS
+// Broker: EMQX Public Broker
+// Web  → port 8083 WS (non-SSL)  |  ESP32+SIM800L → port 1883 TCP
 const MQTT_CONFIG = {
-    host: "ad88ee6f121e4c71933d6feb4208621a.s1.eu.hivemq.cloud",
-    port: 8884,        // WebSocket Secure (WSS) - untuk browser
+    host: "broker.emqx.io",
+    port: 8083,        // WebSocket (WS) - untuk browser
     path: "/mqtt",
     clientId: "swms_web_" + Math.random().toString(16).substr(2, 8),
-    username: "cd_monitoring_armadatrucksampah",
-    password: "CU7g.9MVkgD2!WA",
-    topic: "truck/monitoring/data",
+    username: "emqx_online_test_41d964b0",
+    password: "19++|0M2389aB249c83Re=f9E7b2dWd9",
+    topic: "smartwaste-telkomu-n6a96139/#",
+    topicPublish: "smartwaste-telkomu-n6a96139/truck/data",
     qos: 1,
-    useSSL: true,
+    useSSL: false,
     keepAlive: 60,
     cleanSession: true
 };
