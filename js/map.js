@@ -245,7 +245,7 @@ function drawRoute(routeKey) {
                 missingRouteTolerance: 0
             },
             router: new L.Routing.OSRMv1({
-                serviceUrl: 'https://router.project-osrm.org/route/v1',
+                serviceUrl: 'https://routing.openstreetmap.de/routed-car/route/v1',
                 profile: 'driving',
                 useHints: false
             }),

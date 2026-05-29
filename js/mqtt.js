@@ -1,6 +1,7 @@
 /* ===================================
    MQTT CONNECTION HANDLER
    Smart Waste Monitoring System
+   Uses mqtt.js (not Paho)
    =================================== */
 
 let mqttClient = null;
@@ -8,43 +9,39 @@ let isConnected = false;
 
 // ===== INITIALIZE MQTT CONNECTION =====
 function initMQTT() {
+    if (mqttClient) {
+        try { mqttClient.end(true); } catch(e) {}
+        mqttClient = null;
+    }
+
     try {
-        mqttClient = new Paho.MQTT.Client(
-            MQTT_CONFIG.host,
-            MQTT_CONFIG.port,
-            MQTT_CONFIG.path,
-            MQTT_CONFIG.clientId
-        );
+        const protocol = MQTT_CONFIG.useSSL ? 'wss' : 'ws';
+        const url = `${protocol}://${MQTT_CONFIG.host}:${MQTT_CONFIG.port}${MQTT_CONFIG.path}`;
 
-        mqttClient.onConnectionLost = onMQTTConnectionLost;
-        mqttClient.onMessageArrived = onMQTTMessageArrived;
-
-        const connectOptions = {
-            useSSL: MQTT_CONFIG.useSSL,
-            onSuccess: onMQTTConnect,
-            onFailure: onMQTTFailure,
-            keepAliveInterval: MQTT_CONFIG.keepAlive,
-            cleanSession: MQTT_CONFIG.cleanSession,
-            reconnect: false,
-            timeout: 15
+        const options = {
+            clientId: MQTT_CONFIG.clientId,
+            keepalive: MQTT_CONFIG.keepAlive,
+            clean: MQTT_CONFIG.cleanSession,
+            reconnectPeriod: 0,
+            connectTimeout: 15 * 1000
         };
 
         if (MQTT_CONFIG.username) {
-            connectOptions.userName = MQTT_CONFIG.username;
-            connectOptions.password = MQTT_CONFIG.password;
+            options.username = MQTT_CONFIG.username;
+            options.password = MQTT_CONFIG.password;
         }
 
-        mqttClient.connect(connectOptions);
+        mqttClient = mqtt.connect(url, options);
+
+        mqttClient.on('connect', onMQTTConnect);
+        mqttClient.on('error', onMQTTFailure);
+        mqttClient.on('close', onMQTTConnectionLost);
+        mqttClient.on('message', onMQTTMessageArrived);
 
         updateMQTTStatus("Connecting", "bg-orange-custom");
         addLog("Menghubungkan ke EMQX Broker...", "info");
 
-        const protocol = MQTT_CONFIG.useSSL ? "wss" : "ws";
-        console.log("[MQTT] Connecting to:", {
-            url: `${protocol}://${MQTT_CONFIG.host}:${MQTT_CONFIG.port}${MQTT_CONFIG.path}`,
-            useSSL: MQTT_CONFIG.useSSL,
-            clientId: MQTT_CONFIG.clientId
-        });
+        console.log("[MQTT] Connecting to:", url, "| clientId:", MQTT_CONFIG.clientId);
     } catch (error) {
         console.error("[MQTT] Init Error:", error);
         addLog("Error inisialisasi MQTT: " + error.message, "error");
@@ -55,121 +52,82 @@ function initMQTT() {
 // ===== ON MQTT CONNECTED =====
 function onMQTTConnect() {
     isConnected = true;
-    console.log("MQTT Connected Successfully");
-    
-    // Update UI
+    console.log("[MQTT] Connected successfully");
+
     updateMQTTStatus("Connected", "bg-green-light");
     addLog("✓ Koneksi MQTT berhasil! Broker: " + MQTT_CONFIG.host, "success");
-    
-    // Subscribe to topic
-    mqttClient.subscribe(MQTT_CONFIG.topic, {
-        qos: MQTT_CONFIG.qos,
-        onSuccess: function() {
-            console.log("Subscribed to:", MQTT_CONFIG.topic);
+
+    mqttClient.subscribe(MQTT_CONFIG.topic, { qos: MQTT_CONFIG.qos }, function(err) {
+        if (!err) {
+            console.log("[MQTT] Subscribed to:", MQTT_CONFIG.topic);
             addLog("Berlangganan topic: " + MQTT_CONFIG.topic, "info");
-        },
-        onFailure: function(err) {
-            console.error("Subscribe failed:", err);
-            addLog("Gagal subscribe topic: " + err.errorMessage, "error");
+        } else {
+            console.error("[MQTT] Subscribe failed:", err);
+            addLog("Gagal subscribe topic: " + err.message, "error");
         }
     });
 }
 
-// ===== ON MQTT CONNECTION FAILED =====
+// ===== ON MQTT ERROR =====
 function onMQTTFailure(error) {
     isConnected = false;
-
-    // Decode error code untuk debugging
-    const errorCodes = {
-        0: "OK",
-        1: "Unacceptable protocol version",
-        2: "Client ID rejected",
-        3: "Server unavailable",
-        4: "Bad username or password",
-        5: "Not authorized",
-        7: "Connection timeout / TLS handshake failed",
-        8: "WebSocket error"
-    };
-    const codeLabel = errorCodes[error.errorCode] || `Unknown (code: ${error.errorCode})`;
-
-    console.error("[MQTT] Connection Failed:", {
-        errorCode: error.errorCode,
-        errorMessage: error.errorMessage,
-        decoded: codeLabel,
-        host: MQTT_CONFIG.host,
-        port: MQTT_CONFIG.port
-    });
+    console.error("[MQTT] Error:", error.message);
 
     updateMQTTStatus("Failed", "bg-red-500");
-    addLog(`✗ MQTT gagal [${error.errorCode}]: ${error.errorMessage || codeLabel}`, "error");
+    addLog("✗ MQTT error: " + error.message, "error");
 
-    // Retry setelah 8 detik
     setTimeout(initMQTT, 8000);
 }
 
 // ===== ON MQTT CONNECTION LOST =====
-function onMQTTConnectionLost(responseObject) {
+function onMQTTConnectionLost() {
+    if (!isConnected) return;
     isConnected = false;
-    
-    if (responseObject.errorCode !== 0) {
-        console.log("MQTT Connection Lost:", responseObject.errorMessage);
-        updateMQTTStatus("Disconnected", "bg-red-500");
-        addLog("Koneksi terputus: " + responseObject.errorMessage, "error");
-        
-        // Auto reconnect
-        setTimeout(initMQTT, 3000);
-    }
+
+    console.log("[MQTT] Connection lost");
+    updateMQTTStatus("Disconnected", "bg-red-500");
+    addLog("Koneksi MQTT terputus, mencoba reconnect...", "error");
+
+    setTimeout(initMQTT, 3000);
 }
 
 // ===== ON MESSAGE RECEIVED =====
-function onMQTTMessageArrived(message) {
-    console.log("Message received:", message.payloadString);
-    
+function onMQTTMessageArrived(topic, messageBuffer) {
+    const messageStr = messageBuffer.toString();
+    console.log("[MQTT] Message on", topic, ":", messageStr);
+
     try {
-        const data = JSON.parse(message.payloadString);
+        const data = JSON.parse(messageStr);
         processIncomingData(data);
     } catch (error) {
-        console.error("JSON Parse Error:", error);
-        addLog("Data tidak valid: " + message.payloadString, "warning");
+        console.error("[MQTT] JSON Parse Error:", error);
+        addLog("Data tidak valid: " + messageStr, "warning");
     }
 }
 
 // ===== PROCESS INCOMING SENSOR DATA =====
 function processIncomingData(data) {
-    // Expected data structure from hardware:
-    // {
-    //   "lat": -6.9744,
-    //   "lng": 107.6316,
-    //   "tof1": 120,
-    //   "tof2": 115,
-    //   "tof3": 118,
-    //   "imu": 5.2,
-    //   "gsm": -65,
-    //   "moving": true,
-    //   "timestamp": 1234567890
-    // }
-    
-    console.log("Processing data:", data);
-    
-    // Sinkronisasi data masuk dengan truck ID dari user yang sedang login
+    console.log("[MQTT] Processing data:", data);
+
+    // Filter berdasarkan truck ID user yang login
     const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
     if (currentUser && currentUser.truckId !== 'ALL') {
         const incomingTruckId = data.truck_id || data.truckId || data.id;
         if (incomingTruckId && incomingTruckId.toString().toUpperCase() !== currentUser.truckId.toUpperCase()) {
-            console.log(`Data diabaikan: milik truck ${incomingTruckId}, sedangkan user aktif memantau ${currentUser.truckId}`);
+            console.log(`[MQTT] Data diabaikan: truck ${incomingTruckId}, user memantau ${currentUser.truckId}`);
             return;
         }
     }
-    
-    // Calculate average capacity from 3 ToF sensors
+
+    // Kapasitas dari 3 sensor ToF
     if (data.tof1 !== undefined && data.tof2 !== undefined && data.tof3 !== undefined) {
         const avgDistance = (data.tof1 + data.tof2 + data.tof3) / 3;
         const capacityPercent = calculateCapacity(avgDistance);
         updateCapacityDisplay(capacityPercent);
         updateChart('capacity', capacityPercent);
     }
-    
-    // Update GPS position
+
+    // Posisi GPS
     if (data.lat !== undefined && data.lng !== undefined) {
         const coords = [data.lat, data.lng];
         updateGPSDisplay(data.lat, data.lng);
@@ -177,111 +135,103 @@ function processIncomingData(data) {
         checkRouteCompliance(coords);
         checkGeofence(coords);
     }
-    
-    // Update IMU (tilt angle)
+
+    // Kemiringan IMU
     if (data.imu !== undefined) {
         updateIMUDisplay(data.imu);
         if (Math.abs(data.imu) > SENSOR_CONFIG.imuThreshold) {
             addLog(`⚠ PERINGATAN: Kemiringan tidak normal (${data.imu}°)`, "warning");
         }
     }
-    
-    // Update GSM signal
+
+    // Sinyal GSM
     if (data.gsm !== undefined) {
         updateGSMDisplay(data.gsm);
     }
-    
-    // Update operation status
+
+    // Status gerak
     if (data.moving !== undefined) {
         updateOperationStatus(data.moving);
     }
-    
-    // Add info log (batasi frekuensi log)
+
+    // Log periodik (max 1x per 10 detik)
     const now = Date.now();
     if (!window.lastLogTime || now - window.lastLogTime > 10000) {
-        addLog(`Data diterima - Kapasitas: ${calculateCapacity((data.tof1+data.tof2+data.tof3)/3).toFixed(1)}%, GPS: Valid`, "info");
+        if (data.tof1 !== undefined) {
+            addLog(`Data diterima - Kapasitas: ${calculateCapacity((data.tof1+data.tof2+data.tof3)/3).toFixed(1)}%, GPS: Valid`, "info");
+        }
         window.lastLogTime = now;
     }
 }
 
 // ===== CALCULATE CAPACITY PERCENTAGE =====
 function calculateCapacity(distance) {
-    // distance in cm
     const empty = SENSOR_CONFIG.tofMaxDistance; // 200cm
-    const full = SENSOR_CONFIG.tofMinDistance;   // 20cm
-    
-    let percent = ((empty - distance) / (empty - full)) * 100;
+    const full  = SENSOR_CONFIG.tofMinDistance; // 20cm
+    const percent = ((empty - distance) / (empty - full)) * 100;
     return Math.max(0, Math.min(100, percent));
 }
 
 // ===== UPDATE MQTT STATUS DISPLAY =====
 function updateMQTTStatus(text, colorClass) {
-    // 1. Update status in sidebar footer
     const statusEl = document.getElementById('mqtt-status');
     if (statusEl) {
         statusEl.textContent = text === "Connected" ? "Connected" : (text === "Connecting" ? "Connecting..." : text);
         statusEl.className = `block text-xs px-2 py-1 mt-1 rounded text-white font-semibold ${colorClass}`;
     }
 
-    // 2. Update status card in dashboard
-    const cardEl = document.getElementById('mqtt-card');
-    const valEl = document.getElementById('val-mqtt-status');
-    const indicatorEl = document.getElementById('mqtt-status-indicator');
+    const cardEl          = document.getElementById('mqtt-card');
+    const valEl           = document.getElementById('val-mqtt-status');
+    const indicatorEl     = document.getElementById('mqtt-status-indicator');
     const iconContainerEl = document.getElementById('mqtt-icon-container');
 
     if (cardEl && valEl && indicatorEl && iconContainerEl) {
-        let statusText = "Menghubungkan...";
-        let indicatorText = "Connecting";
-        let cardBorderClass = "border-orange-custom";
+        let statusText       = "Menghubungkan...";
+        let indicatorText    = "Connecting";
+        let cardBorderClass  = "border-orange-custom";
         let indicatorBgClass = "bg-orange-custom";
-        let iconContainerClass = "bg-orange-100 text-orange-custom";
-        let iconHTML = '<i class="fa-solid fa-wifi animate-pulse"></i>';
+        let iconClass        = "bg-orange-100 text-orange-custom";
+        let iconHTML         = '<i class="fa-solid fa-wifi animate-pulse"></i>';
 
         if (text === "Connected") {
-            statusText = "Terhubung";
-            indicatorText = "Online";
-            cardBorderClass = "border-green-light";
+            statusText       = "Terhubung";
+            indicatorText    = "Online";
+            cardBorderClass  = "border-green-light";
             indicatorBgClass = "bg-green-light";
-            iconContainerClass = "bg-green-100 text-green-light";
-            iconHTML = '<i class="fa-solid fa-wifi"></i>';
+            iconClass        = "bg-green-100 text-green-light";
+            iconHTML         = '<i class="fa-solid fa-wifi"></i>';
         } else if (text === "Disconnected" || text === "Failed") {
-            statusText = "Terputus";
-            indicatorText = "Offline";
-            cardBorderClass = "border-red-500";
+            statusText       = "Terputus";
+            indicatorText    = "Offline";
+            cardBorderClass  = "border-red-500";
             indicatorBgClass = "bg-red-500";
-            iconContainerClass = "bg-red-100 text-red-500";
-            iconHTML = '<i class="fa-solid fa-wifi-slash"></i>';
+            iconClass        = "bg-red-100 text-red-500";
+            iconHTML         = '<i class="fa-solid fa-wifi-slash"></i>';
         }
 
         valEl.textContent = statusText;
         indicatorEl.textContent = indicatorText;
-        
-        // Update styling classes dynamically
         cardEl.className = `bg-white p-5 rounded-2xl soft-shadow border-l-4 ${cardBorderClass} flex items-center justify-between`;
         indicatorEl.className = `text-xs px-2 py-1 rounded text-white mt-2 inline-block ${indicatorBgClass} ${text === "Connecting" ? "animate-pulse" : ""}`;
-        iconContainerEl.className = `w-11 h-11 rounded-xl flex items-center justify-center text-xl ${iconContainerClass}`;
+        iconContainerEl.className = `w-11 h-11 rounded-xl flex items-center justify-center text-xl ${iconClass}`;
         iconContainerEl.innerHTML = iconHTML;
     }
 }
 
-// ===== PUBLISH MESSAGE (for future features) =====
+// ===== PUBLISH MESSAGE =====
 function publishMQTT(topic, payload) {
-    if (!isConnected) {
-        console.warn("MQTT not connected");
+    if (!isConnected || !mqttClient) {
+        console.warn("[MQTT] Not connected, cannot publish");
         addLog("MQTT belum terkoneksi, tidak bisa publish", "warning");
         return false;
     }
-    
+
     try {
-        const message = new Paho.MQTT.Message(JSON.stringify(payload));
-        message.destinationName = topic;
-        message.qos = MQTT_CONFIG.qos;
-        message.retained = false;
-        mqttClient.send(message);
-        console.log("Published to:", topic, payload);
+        mqttClient.publish(topic, JSON.stringify(payload), { qos: MQTT_CONFIG.qos, retain: false });
+        console.log("[MQTT] Published to:", topic, payload);
         return true;
     } catch (error) {
-        console.error("Publish error:", error);
+        console.error("[MQTT] Publish error:", error);
         addLog("Error publish MQTT: " + error.message, "error");
         return false;
     }
