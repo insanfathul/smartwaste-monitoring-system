@@ -137,12 +137,22 @@ function processIncomingData(data) {
         updateChart('capacity', capacityPercent);
     }
 
-    // ----- Posisi GPS (hardware: lat / lng, dengan flag gps_valid) -----
+    // ----- Posisi GPS -----
+    // Hardware mengirim: lat, lng, dan "gps":"VALID" atau "gps_valid":1/true
     const hasGps = (data.lat !== undefined && data.lng !== undefined);
-    const gpsValid = (data.gps_valid === undefined) ? true : !!data.gps_valid;
+    const gpsRaw = data.gps_valid !== undefined ? data.gps_valid
+                 : data.gps       !== undefined ? data.gps
+                 : true;
+    const gpsValid = (typeof gpsRaw === 'string')
+                   ? gpsRaw.toUpperCase() === 'VALID'
+                   : !!gpsRaw;
+
     if (hasGps && gpsValid && Number(data.lat) !== 0 && Number(data.lng) !== 0) {
-        const coords = [Number(data.lat), Number(data.lng)];
-        updateGPSDisplay(coords[0], coords[1]);
+        // Leaflet pakai urutan [lat, lng]
+        const lat = Number(data.lat);
+        const lng = Number(data.lng);
+        const coords = [lat, lng];
+        updateGPSDisplay(lat, lng);
         updateTruckPosition(coords);
         checkRouteCompliance(coords);
         checkGeofence(coords);
@@ -169,10 +179,14 @@ function processIncomingData(data) {
     }
 
     // ----- Kecepatan / status gerak -----
+    // Hardware mengirim "speed" (km/h); toleran "speed_kmph" dan "moving"
+    const speedVal = data.speed_kmph !== undefined ? Number(data.speed_kmph)
+                   : data.speed      !== undefined ? Number(data.speed)
+                   : undefined;
     if (data.moving !== undefined) {
         updateOperationStatus(!!data.moving);
-    } else if (data.speed_kmph !== undefined) {
-        updateOperationStatus(Number(data.speed_kmph) > 1.0);
+    } else if (speedVal !== undefined) {
+        updateOperationStatus(speedVal > 1.0);
     }
 
     // ----- Log periodik (maks 1x per 10 detik) -----

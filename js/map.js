@@ -12,9 +12,14 @@ let routingControl = null;   // Leaflet Routing Machine control (gantikan routeP
 let routePolyline = null;    // Fallback jika OSRM tidak tersedia
 let traveledPolyline = null;
 let traveledCoords = [];
+let trailMarkers = [];          // gray breadcrumb dots untuk riwayat pergerakan
+let lastTruckCoord = null;      // untuk hitung arah hadap (heading) truck
 let showingRoute = false;
 let wastePointMarkers = [];
 let currentRoute = null;
+
+const TRAIL_MAX_MARKERS = 80;   // batas jumlah breadcrumb agar peta tidak penuh
+const TRAIL_MIN_GAP_M   = 8;    // jarak minimum (meter) antar breadcrumb baru
 
 // ===== INITIALIZE MAP =====
 function initMap() {
@@ -162,20 +167,45 @@ function showPointDetails(pointId) {
     }
 }
 
-// ===== CREATE TRUCK MARKER =====
-function createTruckMarker() {
-    const truckIcon = L.divIcon({
-        html: `<div style="background-color:#F57C00;color:white;padding:10px;
-                border-radius:50%;box-shadow:0 3px 8px rgba(0,0,0,0.4);
-                text-align:center;border:3px solid white;width:42px;height:42px;
-                display:flex;align-items:center;justify-content:center;">
-                <i class="fa-solid fa-truck-moving" style="font-size:16px;"></i></div>`,
+// ===== CREATE TRUCK ICON (dengan rotasi sesuai arah) =====
+// headingDeg: 0 = utara, 90 = timur, dst. null = tidak diputar.
+function buildTruckIcon(headingDeg) {
+    const rot = (headingDeg === null || headingDeg === undefined) ? 0 : headingDeg;
+    return L.divIcon({
+        html: `
+            <div style="
+                position:relative;width:42px;height:42px;
+                transform:rotate(${rot}deg);transition:transform 0.4s ease;">
+                <div style="
+                    background-color:#F57C00;color:white;
+                    border-radius:50%;box-shadow:0 3px 8px rgba(0,0,0,0.4);
+                    border:3px solid white;width:42px;height:42px;
+                    display:flex;align-items:center;justify-content:center;">
+                    <!-- ikon diputar balik agar tetap tegak, hanya pointer yang ikut arah -->
+                    <i class="fa-solid fa-truck-moving"
+                       style="font-size:16px;transform:rotate(${-rot}deg);"></i>
+                </div>
+                <!-- pointer arah hadap di atas ikon -->
+                <div style="
+                    position:absolute;top:-7px;left:50%;
+                    transform:translateX(-50%);
+                    width:0;height:0;
+                    border-left:6px solid transparent;
+                    border-right:6px solid transparent;
+                    border-bottom:9px solid #F57C00;
+                    filter:drop-shadow(0 -1px 1px rgba(0,0,0,0.3));"></div>
+            </div>`,
         iconSize: [42, 42],
         iconAnchor: [21, 21],
         className: 'custom-truck-marker'
     });
+}
 
-    // Posisi awal = titik pertama rute pagi (Asrama Putra)
+// ===== CREATE TRUCK MARKER =====
+function createTruckMarker() {
+    const truckIcon = buildTruckIcon(null);
+
+    // Posisi awal = pusat kampus (menunggu data GPS sebenarnya)
     const startPos = MAP_CONFIG.center;
     truckMarker = L.marker(startPos, { icon: truckIcon, zIndexOffset: 1000 }).addTo(map);
     truckMarker.bindPopup(`
@@ -523,8 +553,20 @@ function checkRouteCompletion() {
 function updateTruckPosition(coords) {
     if (!truckMarker) return;
 
-    // Pindahkan marker truck ke koordinat GPS terbaru
+    // Hitung arah hadap (heading) dari posisi sebelumnya ke posisi baru
+    let heading = null;
+    if (lastTruckCoord) {
+        const moved = calculateDistance(lastTruckCoord, coords);
+        if (moved >= 1) { // hanya update arah jika benar-benar bergerak (>1m)
+            heading = calculateBearing(lastTruckCoord, coords);
+        }
+    }
+
+    // Geser marker + putar ikon sesuai arah
     truckMarker.setLatLng(coords);
+    if (heading !== null) {
+        truckMarker.setIcon(buildTruckIcon(heading));
+    }
 
     const user = getCurrentUser();
     const capacity = document.getElementById('val-capacity')?.textContent || '0%';
@@ -537,25 +579,67 @@ function updateTruckPosition(coords) {
         </div>
     `);
 
-    // Tambah ke path hanya jika posisi bergerak >= 2 meter dari titik terakhir
-    const lastCoord = traveledCoords[traveledCoords.length - 1];
-    const moved = !lastCoord || calculateDistance(coords, lastCoord) >= 2;
-    if (moved) {
-        traveledCoords.push(coords);
-        if (!traveledPolyline) initTraveledPath();
-        traveledPolyline.setLatLngs(traveledCoords);
-    }
+    // ----- Jejak abu-abu: garis + breadcrumb dots -----
+    traveledCoords.push(coords);
+    if (!traveledPolyline) initTraveledPath();
+    traveledPolyline.setLatLngs(traveledCoords);
 
+    addTrailMarker(coords);
+
+    lastTruckCoord = coords;
     checkProximityToWastePoints(coords);
 }
 
-// ===== INITIALIZE TRAVELED PATH =====
+// ===== TAMBAH BREADCRUMB ABU-ABU (riwayat pergerakan) =====
+function addTrailMarker(coords) {
+    // Jangan menumpuk breadcrumb terlalu rapat
+    if (trailMarkers.length > 0) {
+        const last = trailMarkers[trailMarkers.length - 1].getLatLng();
+        const gap = calculateDistance([last.lat, last.lng], coords);
+        if (gap < TRAIL_MIN_GAP_M) return;
+    }
+
+    const dotIcon = L.divIcon({
+        html: `<div style="
+            width:9px;height:9px;border-radius:50%;
+            background:#9E9E9E;border:1.5px solid #ffffff;
+            box-shadow:0 1px 2px rgba(0,0,0,0.3);"></div>`,
+        iconSize: [9, 9],
+        iconAnchor: [4.5, 4.5],
+        className: 'trail-dot-marker'
+    });
+
+    const m = L.marker(coords, { icon: dotIcon, interactive: false, zIndexOffset: 500 }).addTo(map);
+    trailMarkers.push(m);
+
+    // Batasi jumlah breadcrumb: buang yang paling lama
+    while (trailMarkers.length > TRAIL_MAX_MARKERS) {
+        const old = trailMarkers.shift();
+        map.removeLayer(old);
+    }
+}
+
+// ===== HITUNG BEARING (arah) ANTAR DUA KOORDINAT =====
+// Hasil 0-360 derajat, 0 = utara.
+function calculateBearing(from, to) {
+    const lat1 = from[0] * Math.PI / 180;
+    const lat2 = to[0]   * Math.PI / 180;
+    const dLon = (to[1] - from[1]) * Math.PI / 180;
+    const y = Math.sin(dLon) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) -
+              Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+    let brng = Math.atan2(y, x) * 180 / Math.PI;
+    return (brng + 360) % 360;
+}
+
+// ===== INITIALIZE TRAVELED PATH (garis jejak abu-abu) =====
 function initTraveledPath() {
     traveledPolyline = L.polyline([], {
-        color: '#757575',
-        weight: 4,
-        opacity: 0.7,
-        dashArray: '8, 4'
+        color: '#9E9E9E',
+        weight: 3,
+        opacity: 0.75,
+        dashArray: '1, 6',     // garis putus-putus halus, kesan jejak
+        lineCap: 'round'
     }).addTo(map);
 }
 
@@ -641,6 +725,12 @@ function centerToCampus() {
 function clearTraveledPath() {
     traveledCoords = [];
     if (traveledPolyline) traveledPolyline.setLatLngs([]);
+
+    // Hapus semua breadcrumb abu-abu
+    trailMarkers.forEach(m => map.removeLayer(m));
+    trailMarkers = [];
+    lastTruckCoord = null;
+
     addLog("Jalur perjalanan dihapus", "info");
 }
 
