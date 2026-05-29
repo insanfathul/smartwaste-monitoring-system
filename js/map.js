@@ -523,6 +523,7 @@ function checkRouteCompletion() {
 function updateTruckPosition(coords) {
     if (!truckMarker) return;
 
+    // Pindahkan marker truck ke koordinat GPS terbaru
     truckMarker.setLatLng(coords);
 
     const user = getCurrentUser();
@@ -536,9 +537,14 @@ function updateTruckPosition(coords) {
         </div>
     `);
 
-    traveledCoords.push(coords);
-    if (!traveledPolyline) initTraveledPath();
-    traveledPolyline.setLatLngs(traveledCoords);
+    // Tambah ke path hanya jika posisi bergerak >= 2 meter dari titik terakhir
+    const lastCoord = traveledCoords[traveledCoords.length - 1];
+    const moved = !lastCoord || calculateDistance(coords, lastCoord) >= 2;
+    if (moved) {
+        traveledCoords.push(coords);
+        if (!traveledPolyline) initTraveledPath();
+        traveledPolyline.setLatLngs(traveledCoords);
+    }
 
     checkProximityToWastePoints(coords);
 }
@@ -546,9 +552,10 @@ function updateTruckPosition(coords) {
 // ===== INITIALIZE TRAVELED PATH =====
 function initTraveledPath() {
     traveledPolyline = L.polyline([], {
-        color: '#FF5722',
-        weight: 3,
-        opacity: 0.8
+        color: '#757575',
+        weight: 4,
+        opacity: 0.7,
+        dashArray: '8, 4'
     }).addTo(map);
 }
 
