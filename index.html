@@ -103,17 +103,17 @@
             
             <!-- Navigation Menu -->
             <nav class="p-4 space-y-2 mt-4">
-                <a href="#dashboard" onclick="switchView('dashboard')" 
+                <a href="#dashboard" onclick="switchView('dashboard', event)" 
                    class="nav-link flex items-center gap-4 px-4 py-3 bg-green-600 rounded-xl transition duration-200">
                     <i class="fa-solid fa-map-location-dot w-5"></i>
                     <span class="text-sm font-medium">Live Tracking</span>
                 </a>
-                <a href="#analytics" onclick="switchView('analytics')" 
+                <a href="#analytics" onclick="switchView('analytics', event)" 
                    class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-green-600 rounded-xl transition duration-200">
                     <i class="fa-solid fa-chart-pie w-5"></i>
                     <span class="text-sm font-medium">Analitik</span>
                 </a>
-                <a href="#history" onclick="switchView('history')" 
+                <a href="#history" onclick="switchView('history', event)" 
                    class="nav-link flex items-center gap-4 px-4 py-3 hover:bg-green-600 rounded-xl transition duration-200">
                     <i class="fa-solid fa-history w-5"></i>
                     <span class="text-sm font-medium">Riwayat</span>
@@ -179,7 +179,7 @@
             </div>
             <div class="text-center text-xs text-green-200">
                 <i class="fa-solid fa-server mr-1"></i>
-                <span>HiveMQ Broker</span>
+                <span>EMQX Broker</span>
             </div>
         </div>
     </aside>

@@ -3,16 +3,46 @@
    Smart Waste Monitoring System
    =================================== */
 
-// ===== MQTT CONFIGURATION =====
-// Broker: EMQX Public Broker
-// Web  → port 8083 WS (non-SSL)  |  ESP32+SIM800L → port 1883 TCP
+/* ============================================================
+   ★★★ BROKER SELECTION — EDIT ONLY THIS BLOCK ★★★
+
+   PATH A (DEFAULT, works with SIM800L):  public broker, no TLS, no auth.
+   PATH B (your EMQX Cloud deployment):   needs a NON-TLS 1883 listener
+          for the ESP32, and WSS 8084 for the web. Only switch if your
+          deployment exposes a plain 1883 listener.
+
+   IMPORTANT: the web (this file) and the ESP32 (main.cpp) MUST point at
+   the SAME broker host, or they will never see each other's messages.
+   ============================================================ */
+
+// ---- EMQX CLOUD DEPLOYMENT (active) — WSS 8084, TLS ----
+// Browser handles TLS + SNI automatically, so the web side is reliable.
 const MQTT_CONFIG = {
-    host: "broker.emqx.io",
-    port: 8083,        // WebSocket (WS) - untuk browser
+    host: "n6a96139.ala.asia-southeast1.emqxsl.com",
+    port: 8084,        // 8084 = WSS (secure WebSocket) for EMQX Cloud TLS
     path: "/mqtt",
     clientId: "swms_web_" + Math.random().toString(16).substr(2, 8),
-    username: "emqx_online_test_41d964b0",
-    password: "19++|0M2389aB249c83Re=f9E7b2dWd9",
+    username: "smartwaste_monitoring",
+    password: "gAdx26djJttJeih",
+    topic: "smartwaste-telkomu-n6a96139/#",            // subscribe to all sub-topics
+    topicPublish: "smartwaste-telkomu-n6a96139/truck/data",
+    qos: 1,
+    useSSL: true,      // true for 8084 (wss)
+    keepAlive: 60,
+    cleanSession: true
+};
+
+/* ---- FALLBACK: PUBLIC BROKER (commented out) ----
+   If you ever revert to the public broker, swap the block above for this
+   AND change main.cpp to match (broker.emqx.io / 1883 / no auth).
+
+const MQTT_CONFIG = {
+    host: "broker.emqx.io",
+    port: 8083,        // ws (non-TLS)
+    path: "/mqtt",
+    clientId: "swms_web_" + Math.random().toString(16).substr(2, 8),
+    username: "",
+    password: "",
     topic: "smartwaste-telkomu-n6a96139/#",
     topicPublish: "smartwaste-telkomu-n6a96139/truck/data",
     qos: 1,
@@ -20,6 +50,7 @@ const MQTT_CONFIG = {
     keepAlive: 60,
     cleanSession: true
 };
+*/
 
 // ===== MAP CONFIGURATION =====
 const MAP_CONFIG = {
@@ -166,7 +197,7 @@ const ROUTE_TEMPLATES = {
         estimatedDuration: 120,
         status: "active"
     },
-    
+
     afternoon: {
         id: "ROUTE-AFTERNOON",
         name: "Rute Siang (12:00 - 16:00)",
@@ -184,7 +215,7 @@ const ROUTE_TEMPLATES = {
         estimatedDuration: 90,
         status: "active"
     },
-    
+
     evening: {
         id: "ROUTE-EVENING",
         name: "Rute Sore (15:00 - 18:00)",
@@ -202,7 +233,7 @@ const ROUTE_TEMPLATES = {
         estimatedDuration: 90,
         status: "active"
     },
-    
+
     custom: {
         id: "ROUTE-CUSTOM",
         name: "Rute Custom",
@@ -235,7 +266,8 @@ const STORAGE_KEYS = {
     tripHistory: 'swms_trip_history',
     logs: 'swms_logs',
     activeRoute: 'swms_active_route',
-    wastePoints: 'swms_waste_points'
+    wastePoints: 'swms_waste_points',
+    activeTruck: 'swms_active_truck'
 };
 
 // ===== SENSOR HARDWARE MAPPING =====

@@ -10,7 +10,7 @@ let isConnected = false;
 // ===== INITIALIZE MQTT CONNECTION =====
 function initMQTT() {
     if (mqttClient) {
-        try { mqttClient.end(true); } catch(e) {}
+        try { mqttClient.end(true); } catch (e) {}
         mqttClient = null;
     }
 
@@ -26,6 +26,7 @@ function initMQTT() {
             connectTimeout: 15 * 1000
         };
 
+        // Only send credentials if they are set (public broker uses none)
         if (MQTT_CONFIG.username) {
             options.username = MQTT_CONFIG.username;
             options.password = MQTT_CONFIG.password;
@@ -57,7 +58,7 @@ function onMQTTConnect() {
     updateMQTTStatus("Connected", "bg-green-light");
     addLog("✓ Koneksi MQTT berhasil! Broker: " + MQTT_CONFIG.host, "success");
 
-    mqttClient.subscribe(MQTT_CONFIG.topic, { qos: MQTT_CONFIG.qos }, function(err) {
+    mqttClient.subscribe(MQTT_CONFIG.topic, { qos: MQTT_CONFIG.qos }, function (err) {
         if (!err) {
             console.log("[MQTT] Subscribed to:", MQTT_CONFIG.topic);
             addLog("Berlangganan topic: " + MQTT_CONFIG.topic, "info");
@@ -71,10 +72,10 @@ function onMQTTConnect() {
 // ===== ON MQTT ERROR =====
 function onMQTTFailure(error) {
     isConnected = false;
-    console.error("[MQTT] Error:", error.message);
+    console.error("[MQTT] Error:", error && error.message);
 
     updateMQTTStatus("Failed", "bg-red-500");
-    addLog("✗ MQTT error: " + error.message, "error");
+    addLog("✗ MQTT error: " + (error && error.message), "error");
 
     setTimeout(initMQTT, 8000);
 }
@@ -110,34 +111,48 @@ function onMQTTMessageArrived(topic, messageBuffer) {
 function processIncomingData(data) {
     console.log("[MQTT] Processing data:", data);
 
-    // Filter berdasarkan truck ID user yang login
+    // Filter berdasarkan truck ID user yang login.
+    // Hardware mengirim "truck_id"; juga toleran terhadap variasi nama field.
     const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
     if (currentUser && currentUser.truckId !== 'ALL') {
         const incomingTruckId = data.truck_id || data.truckId || data.id;
-        if (incomingTruckId && incomingTruckId.toString().toUpperCase() !== currentUser.truckId.toUpperCase()) {
+        if (incomingTruckId &&
+            incomingTruckId.toString().toUpperCase() !== currentUser.truckId.toUpperCase()) {
             console.log(`[MQTT] Data diabaikan: truck ${incomingTruckId}, user memantau ${currentUser.truckId}`);
             return;
         }
     }
 
-    // Kapasitas dari 3 sensor ToF
+    // ----- Kapasitas dari 3 sensor ToF (dikirim node sensor terpisah) -----
     if (data.tof1 !== undefined && data.tof2 !== undefined && data.tof3 !== undefined) {
         const avgDistance = (data.tof1 + data.tof2 + data.tof3) / 3;
         const capacityPercent = calculateCapacity(avgDistance);
         updateCapacityDisplay(capacityPercent);
         updateChart('capacity', capacityPercent);
     }
+    // Kapasitas langsung dalam persen (opsional)
+    else if (data.capacity !== undefined) {
+        const capacityPercent = Math.max(0, Math.min(100, Number(data.capacity)));
+        updateCapacityDisplay(capacityPercent);
+        updateChart('capacity', capacityPercent);
+    }
 
-    // Posisi GPS
-    if (data.lat !== undefined && data.lng !== undefined) {
-        const coords = [data.lat, data.lng];
-        updateGPSDisplay(data.lat, data.lng);
+    // ----- Posisi GPS (hardware: lat / lng, dengan flag gps_valid) -----
+    const hasGps = (data.lat !== undefined && data.lng !== undefined);
+    const gpsValid = (data.gps_valid === undefined) ? true : !!data.gps_valid;
+    if (hasGps && gpsValid && Number(data.lat) !== 0 && Number(data.lng) !== 0) {
+        const coords = [Number(data.lat), Number(data.lng)];
+        updateGPSDisplay(coords[0], coords[1]);
         updateTruckPosition(coords);
         checkRouteCompliance(coords);
         checkGeofence(coords);
+    } else if (hasGps && !gpsValid) {
+        // GPS belum fix — beri tahu tanpa memindahkan marker
+        const gpsEl = document.getElementById('val-gps');
+        if (gpsEl) gpsEl.textContent = "Menunggu fix GPS...";
     }
 
-    // Kemiringan IMU
+    // ----- Kemiringan IMU (node sensor terpisah) -----
     if (data.imu !== undefined) {
         updateIMUDisplay(data.imu);
         if (Math.abs(data.imu) > SENSOR_CONFIG.imuThreshold) {
@@ -145,21 +160,29 @@ function processIncomingData(data) {
         }
     }
 
-    // Sinyal GSM
-    if (data.gsm !== undefined) {
-        updateGSMDisplay(data.gsm);
+    // ----- Sinyal GSM (hardware mengirim "gsm_dbm"; toleran "gsm") -----
+    const gsm = (data.gsm_dbm !== undefined) ? data.gsm_dbm
+              : (data.gsm !== undefined) ? data.gsm
+              : undefined;
+    if (gsm !== undefined) {
+        updateGSMDisplay(gsm);
     }
 
-    // Status gerak
+    // ----- Kecepatan / status gerak -----
     if (data.moving !== undefined) {
-        updateOperationStatus(data.moving);
+        updateOperationStatus(!!data.moving);
+    } else if (data.speed_kmph !== undefined) {
+        updateOperationStatus(Number(data.speed_kmph) > 1.0);
     }
 
-    // Log periodik (max 1x per 10 detik)
+    // ----- Log periodik (maks 1x per 10 detik) -----
     const now = Date.now();
     if (!window.lastLogTime || now - window.lastLogTime > 10000) {
         if (data.tof1 !== undefined) {
-            addLog(`Data diterima - Kapasitas: ${calculateCapacity((data.tof1+data.tof2+data.tof3)/3).toFixed(1)}%, GPS: Valid`, "info");
+            const cap = calculateCapacity((data.tof1 + data.tof2 + data.tof3) / 3).toFixed(1);
+            addLog(`Data diterima - Kapasitas: ${cap}%, GPS: ${gpsValid ? 'Valid' : 'No fix'}`, "info");
+        } else if (hasGps) {
+            addLog(`Data GPS diterima - ${gpsValid ? 'Valid' : 'Menunggu fix'}`, "info");
         }
         window.lastLogTime = now;
     }
