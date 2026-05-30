@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Waste Monitoring System - Telkom University</title>
+    <link rel="icon" type="image/png" href="assets/favicon.png" />
 
     <!-- External CSS & JS Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -27,11 +28,9 @@
     <div id="login-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
         <div class="bg-white rounded-2xl soft-shadow p-8 w-full max-w-md">
             <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-green-dark rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fa-solid fa-leaf text-white text-2xl"></i>
-                </div>
-                <h2 class="text-2xl font-bold text-dark-text">Smart Waste Monitoring</h2>
-                <p class="text-sm text-gray-500 mt-2">Telkom University</p>
+                <img src="assets/logo-swt.png" alt="Smart Waste Monitoring System"
+                     class="w-48 h-auto mx-auto mb-3" />
+                <p class="text-sm text-gray-500">Telkom University</p>
             </div>
 
             <form id="login-form" onsubmit="handleLogin(event)">
@@ -80,12 +79,9 @@
     <aside id="sidebar" class="w-64 bg-green-dark text-white flex flex-col soft-shadow z-10 overflow-y-auto">
 
         <!-- Sidebar Header -->
-        <div class="p-6 flex items-center gap-3 border-b border-green-700">
-            <i class="fa-solid fa-leaf text-2xl text-green-300"></i>
-            <div>
-                <h1 class="font-bold text-lg leading-tight">Smart Waste</h1>
-                <span class="text-xs text-green-200">Monitoring System</span>
-            </div>
+        <div class="p-5 flex items-center justify-center border-b border-green-700">
+            <img src="assets/logo-swt.png" alt="Smart Waste Monitoring System"
+                 class="w-full max-w-[180px] h-auto" />
         </div>
 
         <!-- User Info Card -->
