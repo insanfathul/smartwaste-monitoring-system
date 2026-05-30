@@ -544,6 +544,8 @@ function checkRouteCompletion() {
 
     if (completed === total) {
         addLog(`🎉 Rute "${currentRoute.name}" selesai! (${total}/${total} titik)`, "success");
+        // Catat trip ke riwayat (analytics.js)
+        if (typeof onRouteCompleted === 'function') onRouteCompleted(currentRoute);
     } else {
         addLog(`Progress rute: ${completed}/${total} titik selesai`, "info");
     }
@@ -588,6 +590,9 @@ function updateTruckPosition(coords) {
 
     lastTruckCoord = coords;
     checkProximityToWastePoints(coords);
+
+    // Akumulasi jarak tempuh trip (analytics.js)
+    if (typeof trackDistance === 'function') trackDistance(coords[0], coords[1]);
 }
 
 // ===== TAMBAH BREADCRUMB ABU-ABU (riwayat pergerakan) =====

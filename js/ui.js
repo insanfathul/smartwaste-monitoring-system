@@ -30,6 +30,9 @@ function updateCapacityDisplay(percent) {
             addLog(`🚨 KAPASITAS KRITIS (${percent.toFixed(1)}%) - Segera kosongkan!`, "error");
         }
     }
+
+    // Rekam kapasitas untuk estimasi muatan trip (analytics.js)
+    if (typeof trackCapacity === 'function') trackCapacity(percent);
 }
 
 // ===== UPDATE GPS DISPLAY =====
@@ -141,10 +144,16 @@ function updateCurrentTime() {
 setInterval(updateCurrentTime, 1000);
 
 // ===== VIEW SWITCHING =====
-// FIX: event diterima sebagai parameter (HTML memanggil switchView('dashboard', event)),
-// tidak lagi mengandalkan variabel global `event` yang rapuh.
+// Benar-benar menampilkan/menyembunyikan container view, dan memicu
+// render data saat tab Analitik / Riwayat dibuka.
 function switchView(viewName, event) {
     console.log("Switching to view:", viewName);
+
+    const views = ['dashboard', 'analytics', 'history'];
+    views.forEach(v => {
+        const el = document.getElementById(v + '-view');
+        if (el) el.classList.toggle('hidden', v !== viewName);
+    });
 
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active', 'bg-green-600');
@@ -153,6 +162,20 @@ function switchView(viewName, event) {
     if (event && event.target) {
         const link = event.target.closest('.nav-link');
         if (link) link.classList.add('active', 'bg-green-600');
+    }
+
+    if (viewName === 'analytics') {
+        if (typeof refreshAnalyticsUI === 'function') refreshAnalyticsUI();
+        if (typeof updateAnalyticsSummary === 'function') {
+            updateAnalyticsSummary(typeof getTripRecords === 'function' ? getTripRecords() : []);
+        }
+    } else if (viewName === 'history') {
+        if (typeof renderTripHistory === 'function') renderTripHistory();
+    }
+
+    // Leaflet perlu redraw saat kembali ke dashboard (container sempat tersembunyi).
+    if (viewName === 'dashboard' && typeof map !== 'undefined' && map) {
+        setTimeout(() => map.invalidateSize(), 100);
     }
 }
 

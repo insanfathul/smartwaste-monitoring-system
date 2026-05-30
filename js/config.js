@@ -173,6 +173,26 @@ const WASTE_POINTS = [
         priority: "high",
         schedule: ["07:00", "12:00", "17:00"],
         status: "pending"
+    },
+    {
+        id: "WP-11",
+        name: "Gedung P Telkom University",
+        location: [-6.975383478775141, 107.62957454327487],
+        type: "building",
+        capacity: 240,
+        priority: "medium",
+        schedule: ["08:00", "15:00"],
+        status: "pending"
+    },
+    {
+        id: "WP-12",
+        name: "Green Zone TPS Telkom University",
+        location: [-6.977311664800521, 107.63113728825111],
+        type: "tps",
+        capacity: 1000,
+        priority: "high",
+        schedule: ["10:00", "17:00"],
+        status: "pending"
     }
 ];
 
@@ -266,7 +286,8 @@ const STORAGE_KEYS = {
     logs: 'swms_logs',
     activeRoute: 'swms_active_route',
     wastePoints: 'swms_waste_points',
-    activeTruck: 'swms_active_truck'
+    activeTruck: 'swms_active_truck',
+    tripRecords: 'swms_trip_records'
 };
 
 // ===== SENSOR HARDWARE MAPPING =====
@@ -296,5 +317,24 @@ const POINT_ICONS = {
     public: {
         icon: "fa-trash",
         color: "#757575"
+    },
+    tps: {
+        icon: "fa-recycle",
+        color: "#00897B"
     }
 };
+
+// ===== HELPER UNTUK ANALYTICS =====
+// Volume bak truk dalam liter (untuk estimasi muatan terangkut).
+function getBinVolumeLiters() {
+    return 240;
+}
+
+// ID rute yang sedang aktif (dibaca analytics.js untuk deteksi trip selesai).
+// currentRoute diset oleh map.js -> drawRoute().
+function getActiveRouteId() {
+    if (typeof currentRoute !== 'undefined' && currentRoute) {
+        return currentRoute.key || null;
+    }
+    return null;
+}
